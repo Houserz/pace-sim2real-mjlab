@@ -27,11 +27,13 @@ is not physical validation.
 
 ## Build the two environments
 
-The normal mjlab environment performs fitting and evaluation:
+The normal mjlab environment performs conversion, fitting, and evaluation:
 
 ```bash
-uv sync --group dev
+uv sync
 ```
+
+Add `--group dev` only when pytest and Ruff are needed.
 
 The hardware collector supports Ubuntu x86_64 and CPython 3.10.  First copy the
 separately supplied vendor `.deb` and `.whl` into `runtime/dds/dist/`.  From the
@@ -48,10 +50,20 @@ uv pip install --python .venv-hardware/bin/python \
 uv pip install --python .venv-hardware/bin/python --no-deps -e .
 ```
 
-After this one-time setup, run every stage through
-`uv run python scripts/pace/dobot.py`.  The wrapper keeps fitting in the normal
-environment and re-executes hardware commands with `.venv-hardware`; the
-operator does not need to activate or switch environments manually.
+The collection computer does not need Torch, CUDA, mjlab, or CMA-ES.  When only
+the hardware environment is installed, invoke hardware commands directly with
+`.venv-hardware/bin/pace-dobot`; using the repository-level `uv run` command may
+sync the full mjlab project environment.
+
+| Command | Required environment | DDS behavior | Main output |
+| --- | --- | --- | --- |
+| `doctor` | Hardware only | No endpoint | Host check report |
+| `observe` | Hardware only | State reader only | State report |
+| `hold --leg LEG` | Hardware only | Command writer; moves the selected leg | Raw hold NPZ |
+| `collect-chirp --leg LEG` | Hardware only | Command writer; moves the selected leg | Raw collection NPZ |
+| `convert` | Normal mjlab environment | No DDS | PACE PT and JSON sidecar |
+| `fit` | Normal mjlab environment | No DDS | CMA-ES parameters and logs |
+| `evaluate` | Normal mjlab environment | No DDS | Held-out metrics |
 
 Assign the laptop's robot-facing interface `192.168.5.100/24`.  The bundled
 CycloneDDS XML binds by address rather than by interface name, so different
@@ -63,13 +75,13 @@ differently.
 `doctor` does not import the vendor DDS module and opens no endpoint:
 
 ```bash
-uv run python scripts/pace/dobot.py doctor
+.venv-hardware/bin/pace-dobot doctor
 ```
 
 `observe` subscribes to `rt/lower/state` but has no writer call:
 
 ```bash
-uv run python scripts/pace/dobot.py observe --duration 2
+.venv-hardware/bin/pace-dobot observe --duration 2
 ```
 
 ## Operator-run hardware commands
@@ -82,20 +94,29 @@ An optional hold-only trial performs the smooth approach and stability gate but
 does not run the chirp:
 
 ```bash
-uv run python scripts/pace/dobot.py hold --leg FL
+.venv-hardware/bin/pace-dobot hold --leg FL
 ```
 
 The `collect-chirp` command performs approach, hold, automatic stability
 gate, chirp, and bounded damping exit:
 
 ```bash
-uv run python scripts/pace/dobot.py collect-chirp --leg FL
+.venv-hardware/bin/pace-dobot collect-chirp --leg FL
 ```
 
 Both commands display the live state and trajectory envelope, then require one
 short `ARM <LEG> <TOKEN>` confirmation.  No writer exists before that prompt is
 matched.  The other nine joints are present in the whole-body message with
 `Kp=0`, `Kd=0`, and `tau=0`; they require mechanical support.
+
+The collection command writes raw data by default to:
+
+```text
+data/dobot/<leg>/<leg>_collect_<timestamp>.npz
+```
+
+This NPZ can be copied to a separate fitting computer.  It is not yet
+`chirp_data.pt`; conversion is an offline step in the normal environment.
 
 ## Convert and fit
 

@@ -78,14 +78,15 @@ The repository also registers `Dobot-Pace-FL-v0`, `Dobot-Pace-FR-v0`,
 small CPython 3.10 environment because the separately supplied vendor DDS
 binding is platform-specific; fitting remains in the normal mjlab environment.
 
-The operator workflow uses one entry point and one explicit leg selection:
-`doctor`, `hold --leg FL`, `collect-chirp --leg FL`, `convert`, then `fit`.
-Invoke each through `uv run python scripts/pace/dobot.py`.  The four mjlab task
-IDs remain internal details; fitting and evaluation infer the leg from the
-converted data manifest.  Only `hold` and `collect-chirp` can create a command
-writer, and they require one interactive confirmation after displaying the
-selected leg, trajectory envelope, live state, and mechanical-support warning.
-See [the Dobot guide](docs/examples/dobot.md) before hardware use.
+The operator workflow uses one explicit leg selection.  A collection-only
+computer runs `doctor`, `observe`, `hold`, and `collect-chirp` directly through
+`.venv-hardware/bin/pace-dobot`; it does not need Torch, CUDA, or mjlab.
+Conversion, fitting, and evaluation use the normal-environment command
+`uv run python scripts/pace/dobot.py` and infer the leg from the converted data
+manifest.  Only `hold` and `collect-chirp` can create a command writer, and they
+require one interactive confirmation after displaying the selected leg,
+trajectory envelope, live state, and mechanical-support warning.  See [the
+Dobot guide](docs/examples/dobot.md) for the command/environment table.
 
 ## Running the ANYmal-D example
 
@@ -199,7 +200,7 @@ integration test and a meaningful fitting run.
 
 The rendered guide is published at
 [fan-ziqi.github.io/pace-sim2real-mjlab](https://fan-ziqi.github.io/pace-sim2real-mjlab/).
-Build it locally with `uv run --group docs mkdocs build --strict`.
+Build it locally with `uv run --group docs mkdocs build --strict` or `uvx --from 'mkdocs-material==9.7.7' mkdocs serve`
 
 ## Contributing and feedback
 
