@@ -71,6 +71,22 @@ uv sync --group dev
 later launches reuse the cache.  mjlab supports CPU execution too, although PACE
 fitting is intended to run thousands of candidates on CUDA.
 
+## Dobot Rover single-leg identification
+
+The repository also registers `Dobot-Pace-FL-v0`, `Dobot-Pace-FR-v0`,
+`Dobot-Pace-RL-v0`, and `Dobot-Pace-RR-v0`.  Real collection is isolated in a
+small CPython 3.10 environment because the separately supplied vendor DDS
+binding is platform-specific; fitting remains in the normal mjlab environment.
+
+The operator workflow uses one entry point and one explicit leg selection:
+`doctor`, `hold --leg FL`, `collect-chirp --leg FL`, `convert`, then `fit`.
+Invoke each through `uv run python scripts/pace/dobot.py`.  The four mjlab task
+IDs remain internal details; fitting and evaluation infer the leg from the
+converted data manifest.  Only `hold` and `collect-chirp` can create a command
+writer, and they require one interactive confirmation after displaying the
+selected leg, trajectory envelope, live state, and mechanical-support warning.
+See [the Dobot guide](docs/examples/dobot.md) before hardware use.
+
 ## Running the ANYmal-D example
 
 Collect a simulated chirp trajectory:

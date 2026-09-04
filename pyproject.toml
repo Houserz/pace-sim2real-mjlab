@@ -41,6 +41,8 @@ Upstream = "https://github.com/leggedrobotics/pace-sim2real"
 [project.scripts]
 pace-data-collection = "pace_sim2real.scripts.data_collection:main"
 pace-fit = "pace_sim2real.scripts.fit:main"
+pace-evaluate = "pace_sim2real.scripts.evaluate:main"
+pace-dobot = "pace_sim2real.scripts.dobot:main"
 pace-plot-trajectory = "pace_sim2real.scripts.plot_trajectory:main"
 pace-list-envs = "pace_sim2real.scripts.list_envs:main"
 pace-train = "pace_sim2real.scripts.train:main"
@@ -68,7 +70,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-pace_sim2real = ["assets/anymal_d/*"]
+pace_sim2real = ["assets/anymal_d/*", "assets/dobot/*", "assets/dobot/assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

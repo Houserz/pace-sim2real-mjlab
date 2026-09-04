@@ -2,8 +2,11 @@
 
 from mjlab.tasks.registry import register_mjlab_task
 
+from pace_sim2real.dobot import DOBOT_TASK_IDS
+
 from .agents.rsl_rl_ppo_cfg import ppo_runner_cfg
 from .anymal_pace_env_cfg import TASK_ID, anymal_d_pace_env_cfg
+from .dobot_pace_env_cfg import dobot_pace_env_cfg
 
 register_mjlab_task(
     task_id=TASK_ID,
@@ -11,6 +14,14 @@ register_mjlab_task(
     play_env_cfg=anymal_d_pace_env_cfg(play=True),
     rl_cfg=ppo_runner_cfg(),
 )
+
+for leg, task_id in DOBOT_TASK_IDS.items():
+    register_mjlab_task(
+        task_id=task_id,
+        env_cfg=dobot_pace_env_cfg(leg),
+        play_env_cfg=dobot_pace_env_cfg(leg, play=True),
+        rl_cfg=ppo_runner_cfg(),
+    )
 
 # The original extension also shipped this template identifier.  It remains a
 # usable alias so old scripts and project templates do not fail at discovery.

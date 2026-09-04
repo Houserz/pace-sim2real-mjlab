@@ -8,7 +8,7 @@ import torch
 from pace_sim2real import CMAESOptimizer, PaceCfg, PaceSim2realEnvCfg, PaceSim2realSceneCfg
 from pace_sim2real.assets.anymal_d_asset import JOINT_ORDER, get_spec
 from pace_sim2real.tasks.manager_based.pace.anymal_pace_env_cfg import AnymalDPaceCfg
-from pace_sim2real.utils import PaceDCMotorCfg, project_root
+from pace_sim2real.utils import PaceDCMotorCfg, load_pace_artifact, project_root
 
 
 def test_public_api_and_paths_are_available():
@@ -75,6 +75,12 @@ def test_cmaes_log_format_and_stopping(tmp_path: Path):
         assert (run_dirs[0] / "config.pt").exists()
         assert (run_dirs[0] / "mean_000.pt").exists()
         assert (run_dirs[0] / "best_trajectory.pt").exists()
+        assert (run_dirs[0] / "best_trajectory_params.pt").exists()
+        assert (run_dirs[0] / "population_best_000.pt").exists()
+        assert (run_dirs[0] / "best_params.pt").exists()
+        best = load_pace_artifact(run_dirs[0] / "best_params.pt")
+        assert best["joint_order"] == joint_order
+        assert best["params"].shape == (9,)
     finally:
         optimizer.close()
 

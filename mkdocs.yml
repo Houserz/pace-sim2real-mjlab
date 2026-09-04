@@ -10,6 +10,7 @@ nav:
   - Examples:
       - Overview: examples/index.md
       - ANYmal-D: examples/anymal.md
+      - Dobot Rover: examples/dobot.md
   - Guides:
       - Usage and real data: usage.md
       - Custom robot: tutorials/basics.md

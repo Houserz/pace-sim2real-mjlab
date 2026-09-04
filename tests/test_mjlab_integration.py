@@ -5,7 +5,12 @@ import torch
 from mjlab.actuator.actuator import ActuatorCmd
 
 from pace_sim2real import CMAESOptimizer
-from pace_sim2real.scripts._common import make_env, pace_joint_ids, prepare_pace_model
+from pace_sim2real.scripts._common import (
+    make_env,
+    pace_joint_ids,
+    pace_position_action,
+    prepare_pace_model,
+)
 
 
 @pytest.mark.parametrize("device", ["cpu", *(["cuda:0"] if torch.cuda.is_available() else [])])
@@ -127,5 +132,37 @@ def test_anymal_pace_environment_applies_distinct_world_parameters(device: str, 
             optimizer.update_simulator(robot, joint_ids, torch.zeros((4, 12), device=env.device))
         finally:
             optimizer.close()
+    finally:
+        env.close()
+
+
+def test_dobot_single_leg_environment_has_three_delayed_actuators() -> None:
+    env = make_env("Dobot-Pace-FL-v0", num_envs=2, device="cpu")
+    try:
+        robot = env.scene["robot"]
+        joint_ids = pace_joint_ids(robot, env.cfg.sim2real.joint_order, env.device)
+        env.reset()
+        assert robot.is_fixed_base
+        assert len(joint_ids) == 3
+        assert env.action_space.shape == (2, 3)
+        assert len(robot.actuators) == 1
+        assert len(robot.actuators[0].target_ids) == 3
+
+        initial = robot.data.joint_pos_biased[:, joint_ids].clone()
+        prepare_pace_model(
+            env,
+            robot,
+            joint_ids,
+            armature=torch.full((2, 3), 0.000074),
+            damping=torch.full((2, 3), 0.02),
+            friction=torch.full((2, 3), 0.02),
+            bias=torch.zeros((2, 3)),
+            delay=torch.tensor([[0], [4]]),
+            initial_encoder_position=initial,
+        )
+        action = pace_position_action(env, robot, joint_ids, initial)
+        env.step(action)
+        assert torch.isfinite(robot.data.joint_pos[:, joint_ids]).all()
+        assert robot.actuators[0]._torque_delay_buffer.current_lags.tolist() == [0, 4]
     finally:
         env.close()

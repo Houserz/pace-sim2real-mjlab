@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import torch
@@ -59,6 +60,14 @@ def run(args: argparse.Namespace) -> torch.Tensor:
                 "or pass --data."
             )
         data = load_pace_artifact(source, map_location=device)
+        sidecar = source.with_suffix(source.suffix + ".json")
+        if sidecar.exists():
+            manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+            if manifest.get("joint_order") != list(sim2real.joint_order):
+                raise ValueError(
+                    "data manifest joint_order does not match the selected task: "
+                    f"{manifest.get('joint_order')} != {list(sim2real.joint_order)}"
+                )
         time, measured, target = validate_pace_trajectory_data(
             data, physics_dt=env.physics_dt, joint_count=len(joint_ids)
         )

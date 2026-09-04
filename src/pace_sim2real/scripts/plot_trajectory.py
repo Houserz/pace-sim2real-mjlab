@@ -107,10 +107,18 @@ def run(args: argparse.Namespace) -> dict[str, torch.Tensor | list[str]]:
             simulated = require_tensor(
                 load_pace_artifact(run_dir / "best_trajectory.pt"), name="best_trajectory"
             )
+            trajectory_params_path = run_dir / "best_trajectory_params.pt"
+            trajectory_params = (
+                require_tensor(
+                    load_pace_artifact(trajectory_params_path), name="best_trajectory_params"
+                )
+                if trajectory_params_path.exists()
+                else mean
+            )
             real = require_tensor(config["dof_pos"], name="dof_pos")
             desired = require_tensor(config["des_dof_pos"], name="des_dof_pos")
             time = require_tensor(config["time"], name="time")
-            encoder_bias = mean[3 * len(joint_order) : 4 * len(joint_order)]
+            encoder_bias = trajectory_params[3 * len(joint_order) : 4 * len(joint_order)]
             for index, name in enumerate(joint_order):
                 plt.figure(figsize=(8, 4.5))
                 plt.plot(time, simulated[:, index] - encoder_bias[index], label="Sim", linewidth=2)

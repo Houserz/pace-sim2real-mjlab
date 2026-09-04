@@ -1,4 +1,5 @@
 .venv/
+.venv-hardware/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -8,6 +9,8 @@ logs/
 videos/
 wandb/
 *.egg-info/
-dist/
+/dist/
+/runtime/dds/dist/
 build/
 site/
+config/dobot_hardware.local.json

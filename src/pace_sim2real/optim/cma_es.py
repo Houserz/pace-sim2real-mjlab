@@ -133,6 +133,9 @@ class CMAESOptimizer:
         )
         self.params = torch.zeros((population_size, self.bounds.shape[0]), device=device)
         self.sim_params = torch.zeros_like(self.params)
+        self._last_best_params: torch.Tensor | None = None
+        self._last_best_trajectory: torch.Tensor | None = None
+        self._last_best_score: torch.Tensor | None = None
         if save_optimization_process:
             self.sim_params_buffer = torch.zeros(
                 (max_iteration, population_size, self.bounds.shape[0]), device=device
@@ -191,6 +194,11 @@ class CMAESOptimizer:
         self.scores_buffer[self.iteration_counter] = self.scores
         if self.save_optimization_process:
             self.sim_params_buffer[self.iteration_counter] = self.sim_params
+
+        min_index = torch.argmin(self.scores)
+        self._last_best_params = self.sim_params[min_index].detach().cpu().clone()
+        self._last_best_trajectory = self.sim_dof_pos_buffer[min_index].detach().cpu().clone()
+        self._last_best_score = self.scores[min_index].detach().cpu().clone()
 
         solutions = [
             (self.params[i].detach().cpu().numpy(), self.scores[i].item())
@@ -379,11 +387,30 @@ class CMAESOptimizer:
         )
 
     def save_checkpoint(self, mean: torch.Tensor, iteration: int, finished: bool = False) -> None:
-        min_index = torch.argmin(self.scores_buffer[iteration])
-        best_trajectory = self.sim_dof_pos_buffer[min_index].detach().cpu()
+        if (
+            self._last_best_params is None
+            or self._last_best_trajectory is None
+            or self._last_best_score is None
+        ):
+            raise RuntimeError("cannot save a population checkpoint before evolve()")
         run_dir = Path(self.writer.log_dir)
-        torch.save(best_trajectory, run_dir / "best_trajectory.pt")
+        torch.save(self._last_best_trajectory, run_dir / "best_trajectory.pt")
+        torch.save(self._last_best_params, run_dir / "best_trajectory_params.pt")
+        torch.save(
+            {
+                "params": self._last_best_params,
+                "trajectory": self._last_best_trajectory,
+                "score": self._last_best_score,
+                "joint_order": self.joint_order,
+            },
+            run_dir / f"population_best_{iteration:03}.pt",
+        )
         torch.save(mean.detach().cpu(), run_dir / f"mean_{iteration:03}.pt")
+        if finished:
+            torch.save(
+                {"params": self._last_best_params, "joint_order": self.joint_order},
+                run_dir / "best_params.pt",
+            )
         if finished and self.save_optimization_process:
             torch.save(
                 {
