@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
@@ -41,7 +42,9 @@ class DobotDDS:
         self.dds_config = config["dds"]
         self._lock = threading.Lock()
         self._first_state = threading.Event()
-        self._samples: list[StateSample] = []
+        self._samples: deque[StateSample] = deque()
+        self._state_indices: np.ndarray | None = None
+        self._state_offsets: np.ndarray | None = None
         self._middleware: Any = None
         self._dds: Any = None
         self._writer_enabled = False
@@ -51,6 +54,8 @@ class DobotDDS:
         return self._writer_enabled
 
     def start_reader(self) -> None:
+        self._state_indices = np.asarray(self.dds_config["abs2hw"], dtype=np.int64)
+        self._state_offsets = vector(self.config, "dds", "motor_offset", 16)
         configured_uri = _path_uri(self.dds_config["cyclonedds_uri"])
         existing_uri = os.environ.get("CYCLONEDDS_URI", "").strip()
         if existing_uri and existing_uri != configured_uri:
@@ -69,8 +74,10 @@ class DobotDDS:
 
     def _state_callback(self, state: Any) -> None:
         motors = state.motor_state()
-        indices = np.asarray(self.dds_config["abs2hw"], dtype=np.int64)
-        offsets = vector(self.config, "dds", "motor_offset", 16)
+        if self._state_indices is None or self._state_offsets is None:
+            raise RuntimeError("state callback received before reader initialization")
+        indices = self._state_indices
+        offsets = self._state_offsets
         sample = StateSample(
             host_time_ns=time.monotonic_ns(),
             q=np.asarray([motors[hw].q() - offsets[hw] for hw in indices]),
@@ -97,6 +104,29 @@ class DobotDDS:
     def snapshot(self) -> list[StateSample]:
         with self._lock:
             return [_copy(sample) for sample in self._samples]
+
+    def reset_capture_buffer(self) -> int:
+        """Discard pre-arm history while retaining one state for fail-closed checks."""
+        with self._lock:
+            if not self._samples:
+                raise RuntimeError("no Dobot lower-state sample is available")
+            latest = _copy(self._samples[-1])
+            discarded = len(self._samples) - 1
+            self._samples = deque((latest,))
+        return discarded
+
+    def wait_for_state_after(self, host_time_ns: int) -> StateSample:
+        """Wait for a state callback newer than ``host_time_ns`` without creating a writer."""
+        deadline = time.monotonic() + float(self.dds_config["first_state_timeout_s"])
+        while time.monotonic() < deadline:
+            with self._lock:
+                if self._samples and self._samples[-1].host_time_ns > host_time_ns:
+                    return _copy(self._samples[-1])
+            time.sleep(0.001)
+        raise TimeoutError(
+            "no fresh lower-state sample within "
+            f"{self.dds_config['first_state_timeout_s']} s"
+        )
 
     def recent(self, window_s: float) -> list[StateSample]:
         cutoff = time.monotonic_ns() - round(window_s * 1.0e9)

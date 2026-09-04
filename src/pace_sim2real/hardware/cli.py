@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import platform
 import secrets
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +28,25 @@ ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = ROOT / "config" / "dobot_hardware.json"
 DEFAULT_MANIFEST = ROOT / "runtime" / "MANIFEST.sha256"
 DOBOT_XML = ROOT / "src" / "pace_sim2real" / "assets" / "dobot" / "dobot.xml"
+
+
+@contextmanager
+def _suspend_cyclic_gc() -> Iterator[dict[str, bool | int]]:
+    """Keep cyclic GC out of the active control window and always restore it."""
+    was_enabled = gc.isenabled()
+    collected = gc.collect() if was_enabled else 0
+    if was_enabled:
+        gc.disable()
+    state = {
+        "was_enabled": was_enabled,
+        "collected_before_active": collected,
+        "disabled_during_active": not gc.isenabled(),
+    }
+    try:
+        yield state
+    finally:
+        if was_enabled:
+            gc.enable()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -181,64 +203,76 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
     hold_checked = False
     hold_metrics: dict[str, float] | None = None
     active_error: BaseException | None = None
-    transport.enable_writer()
-    start = time.monotonic()
-    try:
-        for index, target in enumerate(targets):
-            deadline = start + index * dt
-            lag_ms = (time.monotonic() - deadline) * 1.0e3
-            if lag_ms > float(config["safety"]["max_schedule_lag_ms"]):
-                raise RuntimeError(f"control schedule lag {lag_ms:.3f} ms exceeds limit")
-            if (
-                mode == "collect"
-                and not hold_checked
-                and index > 0
-                and phases[index - 1] == "hold"
-                and phases[index] == "prehold"
-            ):
+    pre_capture_samples_discarded = transport.reset_capture_buffer()
+    pre_gc_state_time_ns = transport.latest().host_time_ns
+    with _suspend_cyclic_gc() as gc_state:
+        transport.wait_for_state_after(pre_gc_state_time_ns)
+        pre_capture_samples_discarded += transport.reset_capture_buffer()
+        print(
+            "Active capture timing guard: "
+            f"discarded {pre_capture_samples_discarded} pre-arm state samples; "
+            "cyclic GC suspended."
+        )
+        transport.enable_writer()
+        start = time.monotonic()
+        try:
+            for index, target in enumerate(targets):
+                deadline = start + index * dt
+                lag_ms = (time.monotonic() - deadline) * 1.0e3
+                if lag_ms > float(config["safety"]["max_schedule_lag_ms"]):
+                    raise RuntimeError(f"control schedule lag {lag_ms:.3f} ms exceeds limit")
+                if (
+                    mode == "collect"
+                    and not hold_checked
+                    and index > 0
+                    and phases[index - 1] == "hold"
+                    and phases[index] == "prehold"
+                ):
+                    reason, hold_metrics = hold_stability(
+                        config,
+                        transport.recent(
+                            float(config["hold"]["stability_window_s"]) + 0.25
+                        ),
+                        targets[index - 1],
+                        leg,
+                    )
+                    if reason:
+                        raise RuntimeError(f"hold gate failed: {reason}")
+                    hold_checked = True
+                    print(f"Hold gate PASS: {json.dumps(hold_metrics, sort_keys=True)}")
+                    start = time.monotonic() - index * dt
+                sample = transport.latest()
+                reason = safety_reason(config, sample, target, leg, time.monotonic_ns())
+                if reason:
+                    raise RuntimeError(f"hardware safety abort: {reason}")
+                transport.publish_position(target, leg)
+                command_times.append(time.monotonic_ns())
+                commanded.append(target.copy())
+                logged_phases.append(str(phases[index]))
+                remaining = start + (index + 1) * dt - time.monotonic()
+                if remaining > 0:
+                    time.sleep(remaining)
+            if mode == "hold":
                 reason, hold_metrics = hold_stability(
                     config,
                     transport.recent(float(config["hold"]["stability_window_s"]) + 0.25),
-                    targets[index - 1],
+                    targets[-1],
                     leg,
                 )
                 if reason:
                     raise RuntimeError(f"hold gate failed: {reason}")
                 hold_checked = True
-                print(f"Hold gate PASS: {json.dumps(hold_metrics, sort_keys=True)}")
-                start = time.monotonic() - index * dt
-            sample = transport.latest()
-            reason = safety_reason(config, sample, target, leg, time.monotonic_ns())
-            if reason:
-                raise RuntimeError(f"hardware safety abort: {reason}")
-            transport.publish_position(target, leg)
-            command_times.append(time.monotonic_ns())
-            commanded.append(target.copy())
-            logged_phases.append(str(phases[index]))
-            remaining = start + (index + 1) * dt - time.monotonic()
-            if remaining > 0:
-                time.sleep(remaining)
-        if mode == "hold":
-            reason, hold_metrics = hold_stability(
-                config,
-                transport.recent(float(config["hold"]["stability_window_s"]) + 0.25),
-                targets[-1],
-                leg,
+            status = "completed"
+        except BaseException as error:
+            status = (
+                "operator_stop"
+                if isinstance(error, KeyboardInterrupt)
+                else f"aborted:{type(error).__name__}"
             )
-            if reason:
-                raise RuntimeError(f"hold gate failed: {reason}")
-            hold_checked = True
-        status = "completed"
-    except BaseException as error:
-        status = (
-            "operator_stop"
-            if isinstance(error, KeyboardInterrupt)
-            else f"aborted:{type(error).__name__}"
-        )
-        active_error = error
-    finally:
-        print(f"Sending bounded damping shutdown to {leg}.")
-        transport.publish_damping(leg)
+            active_error = error
+        finally:
+            print(f"Sending bounded damping shutdown to {leg}.")
+            transport.publish_damping(leg)
 
     command_time = np.asarray(command_times, dtype=np.int64)
     if len(command_time) < 2:
@@ -273,6 +307,10 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
         "observed_command_rate_hz": rate_hz,
         "max_state_interpolation_gap_ms": gap_ms,
         "hold_stability": hold_metrics,
+        "pre_capture_samples_discarded": pre_capture_samples_discarded,
+        "gc_was_enabled_before_active": gc_state["was_enabled"],
+        "gc_collected_before_active": gc_state["collected_before_active"],
+        "gc_disabled_during_active_capture": gc_state["disabled_during_active"],
         "config": config["_path"],
         "config_sha256": sha256(config["_path"]),
         "model": str(DOBOT_XML),

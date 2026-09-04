@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import gc
 import json
+import threading
+import time
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -14,10 +18,13 @@ from pace_sim2real.dobot import (
     DOBOT_LEG_JOINTS,
     task_id_for_leg,
 )
-from pace_sim2real.hardware.cli import build_parser as build_hardware_parser
+from pace_sim2real.hardware.cli import (
+    _suspend_cyclic_gc,
+    build_parser as build_hardware_parser,
+)
 from pace_sim2real.hardware.config import load_config
 from pace_sim2real.hardware.data import convert_capture, load_capture, save_capture, sha256
-from pace_sim2real.hardware.dobot import DobotDDS
+from pace_sim2real.hardware.dobot import DobotDDS, StateSample
 from pace_sim2real.hardware.excitation import generate_identification
 from pace_sim2real.scripts.dobot import resolve_leg
 from pace_sim2real.tasks.manager_based.pace.dobot_pace_env_cfg import (
@@ -131,10 +138,70 @@ def test_writer_is_created_only_explicitly_and_nonselected_legs_are_passive() ->
     transport.enable_writer()
     transport.publish_position(np.asarray(DOBOT_DEFAULT_JOINT_POS), "FL")
     assert middleware.writer_calls == 1
-    assert middleware.command[0].values["kp"] == 10.0
+    assert middleware.command[0].values["kp"] == 25.0
+    assert middleware.command[0].values["kd"] == 1.3
     assert middleware.command[4].values["kp"] == 0.0
     assert middleware.command[4].values["kd"] == 0.0
     assert middleware.command[4].values["tau"] == 0.0
+
+
+def test_capture_buffer_reset_discards_history_and_keeps_latest_state() -> None:
+    transport = DobotDDS({"dds": {"first_state_timeout_s": 0.1}})
+    samples = [
+        StateSample(
+            host_time_ns=stamp,
+            q=np.full(12, stamp, dtype=np.float64),
+            dq=np.zeros(12),
+            motor_temp=np.zeros(12),
+            tau_est=np.zeros(12),
+        )
+        for stamp in (1, 2, 3)
+    ]
+    transport._samples = deque(samples)
+
+    assert transport.reset_capture_buffer() == 2
+    retained = transport.snapshot()
+    assert len(retained) == 1
+    assert retained[0].host_time_ns == 3
+    assert retained[0] is not samples[-1]
+
+
+def test_wait_for_state_after_returns_only_a_new_callback() -> None:
+    transport = DobotDDS({"dds": {"first_state_timeout_s": 0.1}})
+    old = StateSample(1, np.zeros(12), np.zeros(12), np.zeros(12), np.zeros(12))
+    fresh = StateSample(2, np.ones(12), np.zeros(12), np.zeros(12), np.zeros(12))
+    transport._samples = deque((old,))
+
+    def append_fresh_state() -> None:
+        time.sleep(0.01)
+        with transport._lock:
+            transport._samples.append(fresh)
+
+    worker = threading.Thread(target=append_fresh_state)
+    worker.start()
+    try:
+        received = transport.wait_for_state_after(old.host_time_ns)
+    finally:
+        worker.join()
+
+    assert received.host_time_ns == fresh.host_time_ns
+    assert received is not fresh
+
+
+def test_cyclic_gc_guard_restores_the_previous_state_after_an_error() -> None:
+    initially_enabled = gc.isenabled()
+    gc.enable()
+    try:
+        with pytest.raises(RuntimeError, match="test error"):
+            with _suspend_cyclic_gc() as state:
+                assert state["was_enabled"] is True
+                assert state["disabled_during_active"] is True
+                assert not gc.isenabled()
+                raise RuntimeError("test error")
+        assert gc.isenabled()
+    finally:
+        if not initially_enabled:
+            gc.disable()
 
 
 def test_robot_cfg_contains_only_selected_leg_actuator() -> None:
