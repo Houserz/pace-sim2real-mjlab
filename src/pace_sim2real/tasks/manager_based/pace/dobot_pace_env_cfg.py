@@ -17,11 +17,11 @@ def dobot_bounds(joint_count: int = 3) -> torch.Tensor:
     """Return conservative Dobot bounds in PACE's 4N+1 layout."""
     bounds = torch.zeros((4 * joint_count + 1, 2), dtype=torch.float32)
     bounds[:joint_count, 0] = 1.0e-6
-    bounds[:joint_count, 1] = 0.01
-    bounds[joint_count : 2 * joint_count, 1] = 1.0
-    bounds[2 * joint_count : 3 * joint_count, 1] = 0.5
-    bounds[3 * joint_count : 4 * joint_count, 0] = -0.1
-    bounds[3 * joint_count : 4 * joint_count, 1] = 0.1
+    bounds[:joint_count, 1] = 1
+    bounds[joint_count : 2 * joint_count, 1] = 7.0
+    bounds[2 * joint_count : 3 * joint_count, 1] = 0.7
+    bounds[3 * joint_count : 4 * joint_count, 0] = -0.2
+    bounds[3 * joint_count : 4 * joint_count, 1] = 0.2
     bounds[-1, 1] = 10.0
     return bounds
 
