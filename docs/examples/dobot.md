@@ -152,8 +152,18 @@ exact saved parameter tensor on that independent trajectory:
 uv run python scripts/pace/dobot.py evaluate \
   data/dobot/fl/held_out.pt \
   logs/pace/dobot_fl/<run>/best_params.pt \
+  --config config/dobot_hardware.local.json \
+  --plot logs/pace/dobot_fl/<run>/held_out.png \
   --output logs/pace/dobot_fl/<run>/held_out.json
 ```
+
+The optional `--config` applies the capture's `control.kp` and `control.kd` to
+the simulation.  It also verifies the configuration hash recorded in the raw
+capture, so preserve one local configuration per experiment until evaluation
+is complete.  The desired positions already contain the exact center,
+amplitude, and frequency sent to hardware; evaluation replays those samples
+rather than regenerating a nominal chirp.  `--plot` overlays target, real, and
+simulated joint positions.
 
 `best_params.pt` is the best sampled population member.  `mean_*.pt` is the
 CMA-ES distribution mean.  Each `population_best_*.pt` bundles a score,

@@ -20,6 +20,8 @@ from pace_sim2real.dobot import (
 )
 from pace_sim2real.hardware.cli import (
     _suspend_cyclic_gc,
+)
+from pace_sim2real.hardware.cli import (
     build_parser as build_hardware_parser,
 )
 from pace_sim2real.hardware.config import load_config
@@ -27,11 +29,12 @@ from pace_sim2real.hardware.data import convert_capture, load_capture, save_capt
 from pace_sim2real.hardware.dobot import DobotDDS, StateSample
 from pace_sim2real.hardware.excitation import generate_identification
 from pace_sim2real.scripts.dobot import resolve_leg
+from pace_sim2real.scripts.evaluate import _apply_pd_gains, _load_hardware_config
 from pace_sim2real.tasks.manager_based.pace.dobot_pace_env_cfg import (
     dobot_bounds,
     dobot_pace_env_cfg,
 )
-from pace_sim2real.utils import load_pace_artifact
+from pace_sim2real.utils import PaceDCMotor, load_pace_artifact
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -84,6 +87,7 @@ def test_capture_conversion_selects_leg_and_records_hashes(tmp_path: Path) -> No
             "status": "completed",
             "leg": "FR",
             "physics_dt": 0.0025,
+            "config_sha256": sha256(ROOT / "config/dobot_hardware.json"),
         },
         raw={},
     )
@@ -95,6 +99,32 @@ def test_capture_conversion_selects_leg_and_records_hashes(tmp_path: Path) -> No
     assert manifest["joint_order"] == list(DOBOT_LEG_JOINTS["FR"])
     assert manifest["source_sha256"] == sha256(capture)
     assert load_capture(capture)["metadata"]["leg"] == "FR"
+    loaded = _load_hardware_config(output, ROOT / "config/dobot_hardware.json")
+    assert loaded["control"]["kp"] == [25.0, 25.0, 25.0]
+
+    mismatched = json.loads((ROOT / "config/dobot_hardware.json").read_text())
+    for key in ("config", "cyclonedds_uri"):
+        mismatched["dds"][key] = str((ROOT / "config" / mismatched["dds"][key]).resolve())
+    mismatched["control"]["kp"][0] += 1.0
+    mismatched_path = tmp_path / "mismatched.json"
+    mismatched_path.write_text(json.dumps(mismatched))
+    with pytest.raises(ValueError, match="does not match the held-out capture"):
+        _load_hardware_config(output, mismatched_path)
+
+
+def test_hardware_pd_gains_are_applied_to_the_pace_actuator() -> None:
+    actuator = object.__new__(PaceDCMotor)
+    actuator._target_ids = torch.tensor([1, 2, 3])
+    actuator.stiffness = torch.zeros((2, 3))
+    actuator.damping = torch.zeros((2, 3))
+    actuator.default_stiffness = torch.zeros((2, 3))
+    actuator.default_damping = torch.zeros((2, 3))
+    robot = type("Robot", (), {"actuators": [actuator]})()
+    config = {"control": {"kp": [10.0, 20.0, 30.0], "kd": [1.0, 2.0, 3.0]}}
+    gains = _apply_pd_gains(robot, torch.tensor([1, 2, 3]), config)
+    assert gains == {"kp": [10.0, 20.0, 30.0], "kd": [1.0, 2.0, 3.0]}
+    assert actuator.stiffness.tolist() == [[10.0, 20.0, 30.0]] * 2
+    assert actuator.default_damping.tolist() == [[1.0, 2.0, 3.0]] * 2
 
 
 def test_writer_is_created_only_explicitly_and_nonselected_legs_are_passive() -> None:

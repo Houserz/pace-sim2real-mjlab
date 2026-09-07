@@ -8,7 +8,9 @@ from pathlib import Path
 
 import torch
 
-from pace_sim2real.utils import load_pace_artifact, require_tensor
+from pace_sim2real.hardware.config import load_config
+from pace_sim2real.hardware.data import load_capture, sha256
+from pace_sim2real.utils import PaceDCMotor, load_pace_artifact, require_tensor
 
 from ._common import (
     make_env,
@@ -27,8 +29,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--task", default="Isaac-Pace-Anymal-D-v0")
     parser.add_argument("--task-module", "--task_module", dest="task_module", default=None)
     parser.add_argument("--reference-parameters", type=Path, default=None)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Dobot hardware config used for the held-out capture and simulated PD gains.",
+    )
     parser.add_argument("--device", default=None)
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--plot", type=Path, default=None)
     return parser
 
 
@@ -89,7 +98,86 @@ def _metrics(simulated: torch.Tensor, measured: torch.Tensor) -> dict[str, objec
     }
 
 
+def _load_hardware_config(data_path: Path, config_path: Path) -> dict[str, object]:
+    """Load the exact Dobot config recorded by conversion of this capture."""
+    sidecar = data_path.expanduser().resolve().with_suffix(data_path.suffix + ".json")
+    if not sidecar.is_file():
+        raise ValueError(f"--config requires the conversion manifest: {sidecar}")
+    manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+    source = Path(str(manifest.get("source", ""))).expanduser()
+    if not source.is_file():
+        raise ValueError(f"converted data source capture is unavailable: {source}")
+    if manifest.get("source_sha256") != sha256(source):
+        raise ValueError(f"source capture hash does not match conversion manifest: {source}")
+    expected = load_capture(source)["metadata"].get("config_sha256")
+    config = load_config(config_path)
+    actual = sha256(config["_path"])
+    if expected != actual:
+        raise ValueError(
+            f"hardware config does not match the held-out capture ({actual} != {expected})"
+        )
+    return config
+
+
+def _apply_pd_gains(
+    robot, joint_ids: torch.Tensor, config: dict[str, object]
+) -> dict[str, list[float]]:
+    """Apply the held-out hardware PD gains to the matching PACE actuator."""
+    actuator = next(
+        (
+            item
+            for item in robot.actuators
+            if isinstance(item, PaceDCMotor) and torch.equal(item.target_ids, joint_ids)
+        ),
+        None,
+    )
+    if actuator is None:
+        raise ValueError("--config requires one PaceDCMotor matching the fitted joints")
+    control = config["control"]
+    result: dict[str, list[float]] = {}
+    for name, key in (("stiffness", "kp"), ("damping", "kd")):
+        field = getattr(actuator, name)
+        values = torch.as_tensor(control[key], dtype=field.dtype, device=field.device)
+        if values.shape != (len(joint_ids),):
+            raise ValueError(f"control.{key} must contain one value per fitted joint")
+        field.copy_(values.expand_as(field))
+        getattr(actuator, f"default_{name}").copy_(field)
+        result[key] = values.cpu().tolist()
+    return result
+
+
+def _plot_comparison(
+    path: Path,
+    time: torch.Tensor,
+    joint_order: list[str],
+    target: torch.Tensor,
+    measured: torch.Tensor,
+    simulated: torch.Tensor,
+) -> None:
+    import matplotlib.pyplot as plt
+
+    time_values = time.cpu().numpy()
+    fig, axes = plt.subplots(len(joint_order), 1, figsize=(11, 3 * len(joint_order)), sharex=True)
+    axes = [axes] if len(joint_order) == 1 else axes
+    for index, (axis, joint_name) in enumerate(zip(axes, joint_order, strict=True)):
+        axis.plot(time_values, target[:, index].cpu().numpy(), label="target", linewidth=1.0)
+        axis.plot(time_values, measured[:, index].cpu().numpy(), label="real", linewidth=1.0)
+        axis.plot(time_values, simulated[:, index].cpu().numpy(), label="sim", linewidth=1.0)
+        axis.set_ylabel("position [rad]")
+        axis.set_title(joint_name)
+        axis.grid(True, alpha=0.3)
+        axis.legend()
+    axes[-1].set_xlabel("time [s]")
+    fig.tight_layout()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
 def run(args: argparse.Namespace) -> dict[str, object]:
+    hardware_config = (
+        _load_hardware_config(args.data, args.config) if args.config is not None else None
+    )
     device = resolve_device(args.device)
     env = make_env(args.task, 1, device, task_module=args.task_module)
     try:
@@ -97,25 +185,36 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         joint_order = list(env.cfg.sim2real.joint_order)
         joint_ids = pace_joint_ids(robot, joint_order, device)
         data = load_pace_artifact(args.data, map_location=device)
-        _, measured, target = validate_pace_trajectory_data(
+        time, measured, target = validate_pace_trajectory_data(
             data, physics_dt=env.physics_dt, joint_count=len(joint_order)
         )
+        time = time.to(device)
         measured = measured.to(device)
         target = target.to(device)
+        control = (
+            _apply_pd_gains(robot, joint_ids, hardware_config)
+            if hardware_config is not None
+            else None
+        )
         fitted = _load_parameters(args.parameters, joint_order, device)
+        simulated = _replay(env, robot, joint_ids, target, measured[0], fitted)
         report: dict[str, object] = {
             "task": args.task,
             "joint_order": joint_order,
             "samples": len(measured),
-            "fitted": _metrics(
-                _replay(env, robot, joint_ids, target, measured[0], fitted), measured
-            ),
+            "fitted": _metrics(simulated, measured),
         }
+        if control is not None:
+            report["control"] = control
+            report["config_sha256"] = sha256(hardware_config["_path"])
         if args.reference_parameters is not None:
             reference = _load_parameters(args.reference_parameters, joint_order, device)
             report["reference"] = _metrics(
                 _replay(env, robot, joint_ids, target, measured[0], reference), measured
             )
+        if args.plot is not None:
+            _plot_comparison(args.plot, time, joint_order, target, measured, simulated)
+            report["plot"] = str(args.plot.expanduser().resolve())
         if args.output is not None:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
