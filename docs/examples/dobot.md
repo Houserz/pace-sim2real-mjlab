@@ -90,6 +90,13 @@ The following commands move hardware.  They must be run by the operator only
 after mechanical support, sweep clearance, emergency stop, and absence of a
 competing `rt/lower/cmd` writer are confirmed.
 
+kill controller
+```bash
+cd /home/dobot/code/dobot_quad_sdk/high_level/python
+  /home/dobot/miniconda3/envs/dobot-one-leg-hw/bin/python \
+    examples/kill_robot.py 192.168.5.2:50051
+```
+
 An optional hold-only trial performs the smooth approach and stability gate but
 does not run the chirp:
 
