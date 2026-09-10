@@ -1,4 +1,4 @@
-"""Single-leg Dobot Rover PACE task configurations."""
+"""Single-leg and four-leg Dobot Rover PACE task configurations."""
 
 from __future__ import annotations
 
@@ -54,13 +54,14 @@ class DobotPaceEnvCfg(PaceSim2realEnvCfg):
 def dobot_pace_env_cfg(
     leg: str = "FL", *, play: bool = False, num_envs: int = 4096
 ) -> DobotPaceEnvCfg:
-    """Create a registered fixed-base task for one Dobot leg."""
+    """Create a registered fixed-base task for a Dobot leg or ALL."""
     leg = normalize_leg(leg)
     sim2real = DobotPaceCfg(
         leg=leg,
         robot_name=f"dobot_{leg.lower()}",
         data_dir=f"dobot/{leg.lower()}/chirp_data.pt",
         joint_order=list(DOBOT_LEG_JOINTS[leg]),
+        bounds_params=dobot_bounds(len(DOBOT_LEG_JOINTS[leg])),
     )
     cfg = DobotPaceEnvCfg(
         scene=DobotPaceSceneCfg(num_envs=num_envs, robot=get_dobot_robot_cfg(leg)),

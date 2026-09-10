@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 
-from pace_sim2real.dobot import DOBOT_LEG_INDICES, normalize_leg
+from pace_sim2real.dobot import DOBOT_JOINT_ORDER, DOBOT_LEG_INDICES, normalize_leg
 from pace_sim2real.hardware.config import vector
 
 
@@ -124,8 +124,7 @@ class DobotDDS:
                     return _copy(self._samples[-1])
             time.sleep(0.001)
         raise TimeoutError(
-            "no fresh lower-state sample within "
-            f"{self.dds_config['first_state_timeout_s']} s"
+            f"no fresh lower-state sample within {self.dds_config['first_state_timeout_s']} s"
         )
 
     def recent(self, window_s: float) -> list[StateSample]:
@@ -163,7 +162,7 @@ class DobotDDS:
         )
         self._writer_enabled = True
 
-    def publish_position(self, target_q: np.ndarray, leg: str) -> None:
+    def publish_position(self, target_q: np.ndarray, leg: str, *, damping: bool = False) -> None:
         if not self._writer_enabled:
             raise RuntimeError("refusing to publish: command writer is disabled")
         target = np.asarray(target_q, dtype=np.float64)
@@ -174,7 +173,9 @@ class DobotDDS:
         controlled[list(controlled_indices)] = True
         kp_selected = vector(self.config, "control", "kp", 3)
         kd_selected = vector(self.config, "control", "kd", 3)
-        gains = {index: local for local, index in enumerate(controlled_indices)}
+        if damping:
+            kp_selected = np.zeros(3)
+            kd_selected = np.full(3, float(self.config["control"]["damping_kd"]))
         offsets = vector(self.config, "dds", "motor_offset", 16)
         command = self._dds.LowerCmd()
         for index, hw in enumerate(self.dds_config["abs2hw"]):
@@ -182,8 +183,8 @@ class DobotDDS:
             motor.mode(0)
             motor.q(float(target[index] + offsets[int(hw)]))
             motor.dq(0.0)
-            motor.kp(float(kp_selected[gains[index]]) if controlled[index] else 0.0)
-            motor.kd(float(kd_selected[gains[index]]) if controlled[index] else 0.0)
+            motor.kp(float(kp_selected[index % 3]) if controlled[index] else 0.0)
+            motor.kd(float(kd_selected[index % 3]) if controlled[index] else 0.0)
             motor.tau(0.0)
         self._middleware.publishLowerCmd(command)
 
@@ -191,22 +192,14 @@ class DobotDDS:
         if not self._writer_enabled:
             return
         target = np.zeros(12)
-        original_kp = self.config["control"]["kp"]
-        original_kd = self.config["control"]["kd"]
-        self.config["control"]["kp"] = [0.0, 0.0, 0.0]
-        self.config["control"]["kd"] = [float(self.config["control"]["damping_kd"])] * 3
-        try:
-            dt = float(self.config["physics_dt"])
-            deadline = time.monotonic()
-            for _ in range(max(1, round(float(self.config["control"]["shutdown_damping_s"]) / dt))):
-                self.publish_position(target, leg)
-                deadline += dt
-                remaining = deadline - time.monotonic()
-                if remaining > 0:
-                    time.sleep(remaining)
-        finally:
-            self.config["control"]["kp"] = original_kp
-            self.config["control"]["kd"] = original_kd
+        dt = float(self.config["physics_dt"])
+        deadline = time.monotonic()
+        for _ in range(max(1, round(float(self.config["control"]["shutdown_damping_s"]) / dt))):
+            self.publish_position(target, leg, damping=True)
+            deadline += dt
+            remaining = deadline - time.monotonic()
+            if remaining > 0:
+                time.sleep(remaining)
 
 
 def _path_uri(path: str) -> str:
@@ -230,9 +223,14 @@ def safety_reason(
     if velocity > float(safety["max_abs_joint_velocity_rad_s"]):
         return f"joint velocity {velocity:.3f} rad/s exceeds limit"
     indices = np.asarray(DOBOT_LEG_INDICES[normalize_leg(leg)])
-    error = float(np.max(np.abs(sample.q[indices] - np.asarray(target_q)[indices])))
+    errors = np.abs(sample.q[indices] - np.asarray(target_q)[indices])
+    worst = int(np.argmax(errors))
+    error = float(errors[worst])
     if error > float(safety["max_abs_tracking_error_rad"]):
-        return f"tracking error {error:.3f} rad exceeds limit"
+        return (
+            f"{DOBOT_JOINT_ORDER[indices[worst]]}: tracking error {error:.3f} rad "
+            f"exceeds {float(safety['max_abs_tracking_error_rad']):.3f} rad"
+        )
     temperature = float(np.max(sample.motor_temp))
     if temperature > float(safety["max_motor_temperature_c"]):
         return f"motor temperature {temperature:.1f} C exceeds limit"
@@ -241,7 +239,17 @@ def safety_reason(
 
 def hold_stability(
     config: dict[str, Any], samples: list[StateSample], target_q: np.ndarray, leg: str
-) -> tuple[str | None, dict[str, float]]:
+) -> tuple[str | None, dict[str, Any]]:
+    leg = normalize_leg(leg)
+    if leg == "ALL":
+        per_leg = {}
+        failure = None
+        for name in ("FL", "FR", "RL", "RR"):
+            reason, metrics = hold_stability(config, samples, target_q, name)
+            per_leg[name] = metrics
+            if reason and failure is None:
+                failure = f"{name}: {reason}"
+        return failure, per_leg
     window_s = float(config["hold"]["stability_window_s"])
     if len(samples) < 2:
         return "fewer than two samples in the hold window", {}

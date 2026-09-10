@@ -74,16 +74,19 @@ fitting is intended to run thousands of candidates on CUDA.
 ## Dobot Rover single-leg identification
 
 The repository also registers `Dobot-Pace-FL-v0`, `Dobot-Pace-FR-v0`,
-`Dobot-Pace-RL-v0`, and `Dobot-Pace-RR-v0`.  Real collection is isolated in a
+`Dobot-Pace-RL-v0`, `Dobot-Pace-RR-v0`, and `Dobot-Pace-ALL-v0`.  Real collection is isolated in a
 small CPython 3.10 environment because the separately supplied vendor DDS
 binding is platform-specific; fitting remains in the normal mjlab environment.
 
-The operator workflow uses one explicit leg selection.  A collection-only
+The operator workflow uses one explicit leg selection (`FL/FR/RL/RR`, or `ALL`
+for simultaneous mirrored four-leg collection). ALL mirrors the FL reference
+pose and chirp; it requires a fixed trunk and four airborne legs.  A collection-only
 computer runs `doctor`, `observe`, `hold`, and `collect-chirp` directly through
 `.venv-hardware/bin/pace-dobot`; it does not need Torch, CUDA, or mjlab.
 Conversion, fitting, and evaluation use the normal-environment command
 `uv run python scripts/pace/dobot.py` and infer the leg from the converted data
-manifest.  Only `hold` and `collect-chirp` can create a command writer, and they
+manifest. New captures also carry the actual PD gains for automatic use in
+fitting and evaluation; older captures require `--config`. Only `hold` and `collect-chirp` can create a command writer, and they
 require one interactive confirmation after displaying the selected leg,
 trajectory envelope, live state, and mechanical-support warning.  See [the
 Dobot guide](docs/examples/dobot.md) for the command/environment table.

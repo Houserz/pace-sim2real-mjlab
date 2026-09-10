@@ -31,6 +31,7 @@ def load_config(path: str | Path) -> dict[str, Any]:
         if not value.is_absolute():
             value = source.parent / value
         config["dds"][key] = str(value.resolve())
+    config["chirp"].setdefault("phase_deg", [0.0, 0.0, 0.0])
     validate_config(config)
     return config
 
@@ -53,6 +54,7 @@ def validate_config(config: dict[str, Any]) -> None:
         ("control", "kd", 3),
         ("hold", "target_joint_pos", 12),
         ("chirp", "amplitude_rad", 3),
+        ("chirp", "phase_deg", 3),
         ("chirp", "direction", 3),
     ):
         vector(config, section, key, length)

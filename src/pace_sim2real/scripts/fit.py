@@ -9,9 +9,11 @@ from pathlib import Path
 import torch
 
 from pace_sim2real import CMAESOptimizer
+from pace_sim2real.hardware.data import load_dobot_control
 from pace_sim2real.utils import load_pace_artifact, project_root
 
 from ._common import (
+    apply_pd_gains,
     estimate_cmaes_trajectory_memory,
     make_env,
     pace_joint_ids,
@@ -33,6 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Import this module before resolving --task (for a custom registered task).",
     )
     parser.add_argument("--device", type=str, default=None)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Original hardware config for older Dobot captures without recorded PD gains.",
+    )
     parser.add_argument("--data", type=str, default=None, help="Override chirp_data.pt path.")
     parser.add_argument("--max_iterations", type=int, default=None)
     parser.add_argument(
@@ -68,6 +76,15 @@ def run(args: argparse.Namespace) -> torch.Tensor:
                     "data manifest joint_order does not match the selected task: "
                     f"{manifest.get('joint_order')} != {list(sim2real.joint_order)}"
                 )
+        control = load_dobot_control(
+            source,
+            list(sim2real.joint_order),
+            args.config,
+            required=args.task.startswith("Dobot-Pace-"),
+        )
+        if control is not None:
+            apply_pd_gains(robot, joint_ids, control)
+            print(f"[INFO] Captured PD gains: {control}")
         time, measured, target = validate_pace_trajectory_data(
             data, physics_dt=env.physics_dt, joint_count=len(joint_ids)
         )
@@ -96,6 +113,10 @@ def run(args: argparse.Namespace) -> torch.Tensor:
             save_interval=sim2real.cmaes.save_interval,
             save_optimization_process=sim2real.cmaes.save_optimization_process,
         )
+        if control is not None:
+            (Path(optimizer.writer.log_dir) / "control.json").write_text(
+                json.dumps(control, indent=2) + "\n", encoding="utf-8"
+            )
         initial_encoder_position = measured[0].unsqueeze(0).repeat(env.num_envs, 1)
         env.reset()
         optimizer.update_simulator(env, robot, joint_ids, initial_encoder_position)

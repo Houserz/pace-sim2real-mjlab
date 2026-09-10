@@ -136,27 +136,28 @@ def test_anymal_pace_environment_applies_distinct_world_parameters(device: str, 
         env.close()
 
 
-def test_dobot_single_leg_environment_has_three_delayed_actuators() -> None:
-    env = make_env("Dobot-Pace-FL-v0", num_envs=2, device="cpu")
+@pytest.mark.parametrize("leg,count", [("FL", 3), ("ALL", 12)])
+def test_dobot_environment_has_selected_delayed_actuators(leg, count) -> None:
+    env = make_env(f"Dobot-Pace-{leg}-v0", num_envs=2, device="cpu")
     try:
         robot = env.scene["robot"]
         joint_ids = pace_joint_ids(robot, env.cfg.sim2real.joint_order, env.device)
         env.reset()
         assert robot.is_fixed_base
-        assert len(joint_ids) == 3
-        assert env.action_space.shape == (2, 3)
+        assert len(joint_ids) == count
+        assert env.action_space.shape == (2, count)
         assert len(robot.actuators) == 1
-        assert len(robot.actuators[0].target_ids) == 3
+        assert len(robot.actuators[0].target_ids) == count
 
         initial = robot.data.joint_pos_biased[:, joint_ids].clone()
         prepare_pace_model(
             env,
             robot,
             joint_ids,
-            armature=torch.full((2, 3), 0.000074),
-            damping=torch.full((2, 3), 0.02),
-            friction=torch.full((2, 3), 0.02),
-            bias=torch.zeros((2, 3)),
+            armature=torch.full((2, count), 0.000074),
+            damping=torch.full((2, count), 0.02),
+            friction=torch.full((2, count), 0.02),
+            bias=torch.zeros((2, count)),
             delay=torch.tensor([[0], [4]]),
             initial_encoder_position=initial,
         )
@@ -166,3 +167,92 @@ def test_dobot_single_leg_environment_has_three_delayed_actuators() -> None:
         assert robot.actuators[0]._torque_delay_buffer.current_lags.tolist() == [0, 4]
     finally:
         env.close()
+
+
+def test_dobot_all_convert_fit_and_held_out_replay(tmp_path, monkeypatch) -> None:
+    import json
+
+    import numpy as np
+
+    from pace_sim2real.dobot import DOBOT_LEG_JOINTS, DOBOT_MIRROR_SIGNS
+    from pace_sim2real.hardware.data import convert_capture, save_capture
+    from pace_sim2real.scripts import evaluate, fit
+    from pace_sim2real.scripts._common import apply_pd_gains
+    from pace_sim2real.utils import load_pace_artifact
+
+    monkeypatch.setattr(fit, "project_root", lambda: tmp_path)
+    task = "Dobot-Pace-ALL-v0"
+    order = list(DOBOT_LEG_JOINTS["ALL"])
+    control = {"kp": [40.0] * 12, "kd": [1.8] * 12}
+    params = torch.tensor([0.01] * 12 + [0.1] * 12 + [0.02] * 12 + [0.0] * 12 + [0.0])
+    env = make_env(task, 1, "cpu")
+    paths = []
+    try:
+        robot = env.scene["robot"]
+        ids = pace_joint_ids(robot, order, "cpu")
+        apply_pd_gains(robot, ids, control)
+        for name, amplitude in (("train", 0.02), ("held_out", 0.03)):
+            t = torch.arange(32) * env.physics_dt
+            reference = torch.tensor([0.05, 0.78, -1.2]) + amplitude * torch.sin(
+                2 * torch.pi * t[:, None]
+            )
+            target = (reference[:, None, :] * torch.tensor(DOBOT_MIRROR_SIGNS)).reshape(-1, 12)
+            measured = evaluate._replay(env, robot, ids, target, target[0], params)
+            capture = save_capture(
+                tmp_path / f"{name}.npz",
+                time_s=t.numpy(),
+                dof_pos=measured.numpy(),
+                des_dof_pos=target.numpy(),
+                phases=np.full(len(t), "chirp"),
+                metadata={
+                    "leg": "ALL",
+                    "mode": "synthetic_test",
+                    "eligible_for_fit": True,
+                    "physics_dt": env.physics_dt,
+                    "control": control,
+                },
+                raw={},
+            )
+            paths.append(convert_capture(capture, tmp_path / f"{name}.pt")[0])
+    finally:
+        env.close()
+    fit.main(
+        [
+            "--task",
+            task,
+            "--data",
+            str(paths[0]),
+            "--num_envs",
+            "4",
+            "--max_iterations",
+            "1",
+            "--device",
+            "cpu",
+        ]
+    )
+    best = next((tmp_path / "logs").rglob("best_params.pt"))
+    assert load_pace_artifact(best)["params"].shape == (49,)
+    assert json.loads(best.with_name("control.json").read_text()) == control
+    reference_path = tmp_path / "nominal.pt"
+    torch.save({"params": params, "joint_order": order}, reference_path)
+    report = evaluate.run(
+        evaluate.build_parser().parse_args(
+            [
+                str(paths[1]),
+                str(best),
+                "--task",
+                task,
+                "--device",
+                "cpu",
+                "--reference-parameters",
+                str(reference_path),
+                "--plot",
+                str(tmp_path / "held_out.png"),
+            ]
+        )
+    )
+    assert report["control"] == control
+    assert set(report["legs"]) == {"FL", "FR", "RL", "RR"}
+    assert report["reference"]["rmse"] < 1e-6
+    assert np.isfinite(report["fitted"]["rmse"])
+    assert (tmp_path / "held_out.png").is_file()

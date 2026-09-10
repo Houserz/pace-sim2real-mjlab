@@ -49,21 +49,22 @@ def _initial_state() -> EntityCfg.InitialStateCfg:
 
 
 def get_dobot_robot_cfg(leg: str) -> EntityCfg:
-    """Return a fresh fixed-base robot with PACE actuators for one selected leg."""
+    """Return a fresh fixed-base robot with PACE actuators for the selected joints."""
     leg = normalize_leg(leg)
     indices = DOBOT_LEG_INDICES[leg]
+    count = len(indices)
     effort_limits = tuple(DOBOT_EFFORT_LIMITS[index] for index in indices)
     actuator = PaceDCMotorCfg(
         joint_names_expr=DOBOT_LEG_JOINTS[leg],
         saturation_effort=effort_limits,
         effort_limit=effort_limits,
-        velocity_limit=(20.0, 20.0, 20.0),
-        stiffness=(25.0, 25.0, 25.0),
-        damping=(1.3, 1.3, 1.3),
+        velocity_limit=(20.0,) * count,
+        stiffness=(25.0,) * count,
+        damping=(1.3,) * count,
         encoder_bias=0.0,
-        armature=(0.000074, 0.000074, 0.000074),
-        frictionloss=(0.02, 0.02, 0.02),
-        viscous_damping=(0.02, 0.02, 0.02),
+        armature=(0.000074,) * count,
+        frictionloss=(0.02,) * count,
+        viscous_damping=(0.02,) * count,
         max_delay=10,
     )
     return EntityCfg(

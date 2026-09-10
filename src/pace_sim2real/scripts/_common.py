@@ -9,7 +9,7 @@ import torch
 from mjlab.envs import ManagerBasedRlEnv
 from mjlab.tasks.registry import load_env_cfg
 
-from pace_sim2real.utils import apply_pace_parameters, bind_environment, project_root
+from pace_sim2real.utils import PaceDCMotor, apply_pace_parameters, bind_environment, project_root
 
 
 def resolve_device(device: str | None) -> str:
@@ -219,3 +219,29 @@ def estimate_cmaes_trajectory_memory(
 def data_path(data_dir: str) -> Path:
     """Resolve a PACE-relative data file path, keeping ``PACE_ROOT`` support."""
     return project_root() / "data" / data_dir
+
+
+def apply_pd_gains(
+    robot, joint_ids: torch.Tensor, control: dict[str, list[float]]
+) -> dict[str, list[float]]:
+    """Apply captured PD gains to the matching PACE actuator in fit or replay."""
+    actuator = next(
+        (
+            item
+            for item in robot.actuators
+            if isinstance(item, PaceDCMotor) and torch.equal(item.target_ids, joint_ids)
+        ),
+        None,
+    )
+    if actuator is None:
+        raise ValueError("captured control requires one PaceDCMotor matching the fitted joints")
+    result: dict[str, list[float]] = {}
+    for name, key in (("stiffness", "kp"), ("damping", "kd")):
+        field = getattr(actuator, name)
+        values = torch.as_tensor(control[key], dtype=field.dtype, device=field.device)
+        if values.shape != (len(joint_ids),):
+            raise ValueError(f"control.{key} must contain one value per fitted joint")
+        field.copy_(values.expand_as(field))
+        getattr(actuator, f"default_{name}").copy_(field)
+        result[key] = values.cpu().tolist()
+    return result

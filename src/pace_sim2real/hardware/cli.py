@@ -18,8 +18,13 @@ from typing import Any
 
 import numpy as np
 
-from pace_sim2real.dobot import DOBOT_LEG_INDICES, DOBOT_XML_SHA256, normalize_leg
-from pace_sim2real.hardware.config import load_config
+from pace_sim2real.dobot import (
+    DOBOT_JOINT_ORDER,
+    DOBOT_LEG_INDICES,
+    DOBOT_XML_SHA256,
+    normalize_leg,
+)
+from pace_sim2real.hardware.config import load_config, vector
 from pace_sim2real.hardware.data import align_samples, convert_capture, save_capture, sha256
 from pace_sim2real.hardware.dobot import DobotDDS, hold_stability, safety_reason
 from pace_sim2real.hardware.excitation import generate_hold, generate_identification
@@ -61,7 +66,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     for name in ("hold", "collect-chirp"):
         active = subparsers.add_parser(name, parents=[common], help=f"Active {name} command.")
-        active.add_argument("--leg", type=str.upper, choices=("FL", "FR", "RL", "RR"), required=True)
+        active.add_argument(
+            "--leg",
+            type=str.upper,
+            choices=tuple(DOBOT_LEG_INDICES),
+            required=True,
+            help="One leg, or ALL for simultaneous mirrored four-leg motion.",
+        )
         active.add_argument("--output", type=Path, default=None)
         active.add_argument("--overwrite", action="store_true")
 
@@ -162,7 +173,7 @@ def _trajectory_report(targets: np.ndarray, leg: str, dt: float) -> None:
         values = targets[:, index]
         velocity = float(np.max(np.abs(np.diff(values) / dt)))
         print(
-            f"  joint[{index}]: q=[{values.min():.5f}, {values.max():.5f}] rad, max|dq_des|={velocity:.5f} rad/s"
+            f"  {DOBOT_JOINT_ORDER[index]}: q=[{values.min():.5f}, {values.max():.5f}] rad, max|dq_des|={velocity:.5f} rad/s"
         )
 
 
@@ -171,8 +182,13 @@ def _confirm_active(leg: str, mode: str) -> None:
         raise PermissionError("active Dobot commands require an interactive terminal")
     token = secrets.token_hex(2).upper()
     phrase = f"ARM {leg} {token}"
-    print(f"WARNING: {mode} creates a writer on rt/lower/cmd and controls only {leg}.")
-    print("The trunk and other legs must be mechanically supported, sweep volume clear,")
+    print(f"WARNING: {mode} creates a writer on rt/lower/cmd.")
+    if leg == "ALL":
+        print("ALL moves FL, FR, RL and RR simultaneously (12 joints).")
+        print("Fix the trunk and keep all four legs airborne with their sweep volumes clear.")
+        print("Review the mirrored rear-leg pose; vertical reactions are not cancelled.")
+    else:
+        print(f"Only {leg} is controlled; support the trunk and other legs, sweep volume clear.")
     print("the emergency stop ready, and no competing lower-command writer active.")
     if input(f"Type {phrase} to create the writer: ").strip() != phrase:
         raise PermissionError("confirmation did not match; no writer was created")
@@ -180,6 +196,8 @@ def _confirm_active(leg: str, mode: str) -> None:
 
 def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite: bool) -> int:
     leg = normalize_leg(leg)
+    if output.exists() and not overwrite:
+        raise FileExistsError(f"output exists: {output}")
     transport = DobotDDS(config)
     transport.start_reader()
     first = transport.wait_for_first_state()
@@ -190,6 +208,30 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
         time_s, targets, phases = generate_identification(config, baseline, leg)
     dt = float(config["physics_dt"])
     _trajectory_report(targets, leg, dt)
+    if leg == "ALL":
+        print("ALL mirrors hold.target_joint_pos[:3] (FL); other hold entries are unused.")
+        print("Mirroring applies after approach; all four hold gates must pass before chirp.")
+        print(
+            f"Approach duration: {np.count_nonzero(phases == 'approach') * dt:.3f} s "
+            "(automatically extended if needed to respect the hold speed limit)."
+        )
+        hold_target = targets[np.flatnonzero(phases == "hold")[-1]].reshape(4, 3)
+        for name, pose in zip(("FL", "FR", "RL", "RR"), hold_target, strict=True):
+            print(f"  {name} hold [abad, thigh, calf]: {pose.tolist()} rad")
+    print(
+        f"PD gains [abad, thigh, calf]: Kp={config['control']['kp']}, Kd={config['control']['kd']}"
+    )
+    if mode == "collect":
+        chirp = config["chirp"]
+        print(
+            f"Chirp [abad, thigh, calf]: amplitude={chirp['amplitude_rad']} rad, "
+            f"phase={chirp['phase_deg']} deg, direction={chirp['direction']}"
+        )
+        print(
+            f"Sweep: {chirp['min_frequency_hz']} -> {chirp['max_frequency_hz']} Hz "
+            f"over {chirp['duration_s']} s; smooth ramp {chirp['ramp_s']} s."
+        )
+    print(f"Capture output: {output}")
     print(
         f"State ready: max|dq|={np.max(np.abs(first.dq)):.4f} rad/s, "
         f"max temperature={np.max(first.motor_temp):.1f} C"
@@ -201,7 +243,7 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
     logged_phases: list[str] = []
     status = "running"
     hold_checked = False
-    hold_metrics: dict[str, float] | None = None
+    hold_metrics: dict[str, Any] | None = None
     active_error: BaseException | None = None
     pre_capture_samples_discarded = transport.reset_capture_buffer()
     pre_gc_state_time_ns = transport.latest().host_time_ns
@@ -230,9 +272,7 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
                 ):
                     reason, hold_metrics = hold_stability(
                         config,
-                        transport.recent(
-                            float(config["hold"]["stability_window_s"]) + 0.25
-                        ),
+                        transport.recent(float(config["hold"]["stability_window_s"]) + 0.25),
                         targets[index - 1],
                         leg,
                     )
@@ -303,6 +343,10 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
         "eligible_for_fit": eligible,
         "leg": leg,
         "selected_indices": list(DOBOT_LEG_INDICES[leg]),
+        "control": {key: vector(config, "control", key, 3).tolist() for key in ("kp", "kd")},
+        "trajectory_mode": "mirrored" if leg == "ALL" else "single_leg",
+        "chirp": dict(config["chirp"]) if mode == "collect" else None,
+        "error": str(active_error) if active_error is not None else None,
         "physics_dt": dt,
         "observed_command_rate_hz": rate_hz,
         "max_state_interpolation_gap_ms": gap_ms,

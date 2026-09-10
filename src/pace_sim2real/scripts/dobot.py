@@ -18,14 +18,16 @@ USAGE = """usage: pace-dobot COMMAND [ARGS]
 Commands:
   doctor                         Offline host and runtime checks
   observe [--duration S]         Read lower state; never creates a writer
-  hold --leg LEG                 Active hold-only safety trial
-  collect-chirp --leg LEG        Active hold, gate, and chirp capture
+  hold --leg LEG                 Active hold-only trial; LEG = FL/FR/RL/RR/ALL
+  collect-chirp --leg LEG        Active hold, gate, and chirp; ALL mirrors four legs
   convert SOURCE [--output PT]   Convert a raw capture to PACE tensors
   fit [--leg LEG] [--data PT] [--num_envs N] [--device DEV]
   evaluate [--leg LEG] DATA PARAMS [--output JSON] [--device DEV]
 
 For fit/evaluate, --leg is inferred from DATA.pt.json when present. If both are
 supplied, they must agree. Active commands always require an explicit --leg.
+ALL mirrors the FL hold pose and 3-joint chirp across four airborne legs.
+New captures carry their PD gains. Old captures require --config for fit/evaluate.
 """
 
 
@@ -37,7 +39,7 @@ def _extract_leg(args: list[str]) -> tuple[str | None, list[str]]:
         arg = args[index]
         if arg == "--leg":
             if index + 1 >= len(args):
-                raise SystemExit("--leg requires FL, FR, RL, or RR")
+                raise SystemExit("--leg requires FL, FR, RL, RR, or ALL")
             value = args[index + 1]
             index += 2
         elif arg.startswith("--leg="):
@@ -52,7 +54,7 @@ def _extract_leg(args: list[str]) -> tuple[str | None, list[str]]:
         except ValueError as error:
             raise SystemExit(str(error)) from error
         if leg is not None and leg != normalized:
-            raise SystemExit("only one Dobot leg may be selected")
+            raise SystemExit("choose one selection: FL, FR, RL, RR, or ALL")
         leg = normalized
     return leg, remaining
 

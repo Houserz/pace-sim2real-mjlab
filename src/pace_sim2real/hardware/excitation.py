@@ -1,4 +1,4 @@
-"""Dobot single-leg hold and chirp trajectory generation."""
+"""Dobot single-leg and mirrored four-leg hold/chirp trajectories."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pace_sim2real.dobot import (
     DOBOT_JOINT_LOWER,
     DOBOT_JOINT_UPPER,
     DOBOT_LEG_INDICES,
+    DOBOT_MIRROR_SIGNS,
     normalize_leg,
 )
 from pace_sim2real.hardware.config import vector
@@ -26,11 +27,14 @@ def generate_hold(
     config: dict[str, Any], baseline: np.ndarray, leg: str
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     baseline = _baseline(baseline)
-    indices = np.asarray(DOBOT_LEG_INDICES[normalize_leg(leg)], dtype=np.int64)
+    leg = normalize_leg(leg)
+    indices = np.asarray(DOBOT_LEG_INDICES[leg], dtype=np.int64)
     rate = 1.0 / float(config["physics_dt"])
     hold = config["hold"]
     target = baseline.copy()
     reviewed = vector(config, "hold", "target_joint_pos", 12)
+    if leg == "ALL":
+        reviewed = (reviewed[:3] * np.asarray(DOBOT_MIRROR_SIGNS)).reshape(12)
     target[indices] = reviewed[indices]
     lower = np.asarray(DOBOT_JOINT_LOWER)
     upper = np.asarray(DOBOT_JOINT_UPPER)
@@ -41,6 +45,16 @@ def generate_hold(
         raise ValueError("selected hold target must lie strictly inside joint limits")
 
     ramp_count = max(2, round(float(hold["ramp_s"]) * rate))
+    if leg == "ALL":
+        # Rear joints may cross to a mirrored pose: lengthen approach rather
+        # than exceeding the operator's existing command-velocity limit.
+        minimum_steps = (
+            np.pi
+            * np.max(np.abs(target - baseline))
+            * rate
+            / (2.0 * float(hold["max_command_velocity_rad_s"]))
+        )
+        ramp_count = max(ramp_count, int(np.ceil(minimum_steps)) + 1)
     hold_count = max(2, round(float(hold["duration_s"]) * rate))
     blend = np.linspace(0.0, 1.0, ramp_count)
     blend = 0.5 - 0.5 * np.cos(np.pi * blend)
@@ -63,7 +77,12 @@ def generate_chirp(
     config: dict[str, Any], center: np.ndarray, leg: str
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     center = _baseline(center)
-    indices = np.asarray(DOBOT_LEG_INDICES[normalize_leg(leg)], dtype=np.int64)
+    leg = normalize_leg(leg)
+    indices = np.asarray(DOBOT_LEG_INDICES[leg], dtype=np.int64)
+    if leg == "ALL":
+        mirrored = (center[:3] * np.asarray(DOBOT_MIRROR_SIGNS)).reshape(12)
+        if not np.allclose(center, mirrored, rtol=0.0, atol=1e-12):
+            raise ValueError("ALL chirp requires a mirrored hold center")
     chirp = config["chirp"]
     rate = 1.0 / float(config["physics_dt"])
     pre = round(float(chirp["pre_hold_s"]) * rate)
@@ -87,11 +106,15 @@ def generate_chirp(
     ramp = float(chirp["ramp_s"])
     envelope = np.sin(0.5 * np.pi * np.clip(local_time / ramp, 0.0, 1.0)) ** 2
     envelope *= np.sin(0.5 * np.pi * np.clip((duration - local_time) / ramp, 0.0, 1.0)) ** 2
+    phase_offset = np.deg2rad(vector(config, "chirp", "phase_deg", 3))
     offsets = (
-        (envelope * np.sin(phase))[:, None]
+        envelope[:, None]
+        * np.sin(phase[:, None] + phase_offset[None, :])
         * vector(config, "chirp", "amplitude_rad", 3)[None, :]
         * vector(config, "chirp", "direction", 3)[None, :]
     )
+    if leg == "ALL":
+        offsets = (offsets[:, None, :] * np.asarray(DOBOT_MIRROR_SIGNS)).reshape(count, 12)
     targets[pre : pre + count, indices] += offsets
     phases[pre : pre + count] = "chirp"
     lower = np.asarray(DOBOT_JOINT_LOWER)[indices]

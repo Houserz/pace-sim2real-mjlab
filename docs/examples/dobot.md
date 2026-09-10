@@ -1,15 +1,98 @@
-# Dobot Rover single-leg identification
+# Dobot Rover identification
 
-The Dobot integration keeps real-time DDS collection separate from GPU fitting.
-The first supported hardware target is one airborne, mechanically isolated leg:
-`FL`, `FR`, `RL`, or `RR`.  Simultaneous multi-leg motion needs a separate
-fixture and excitation review and is intentionally not exposed as an active
-command.
+Use `FL`, `FR`, `RL`, or `RR` for one leg, or explicitly select `ALL` for
+simultaneous mirrored four-leg identification. Collection stays in the small
+hardware environment; conversion, fitting and evaluation use the mjlab environment.
 
-The migrated historical hardware evidence covers FL.  The other three task and
-collector selections share the audited joint mapping, but each still requires a
-new operator-reviewed hold-only trial before chirp collection; software symmetry
-is not physical validation.
+`ALL` requires a fixed trunk and four airborne legs. Review and run a hold-only
+trial before collecting. Software and model symmetry are not hardware acceptance.
+
+## Four-leg operator workflow
+
+The existing config is the only experiment configuration. In `ALL` mode:
+
+- `hold.target_joint_pos[:3]` is the FL reference pose `[abad, thigh, calf]`.
+  The other nine hold entries are used only for single-leg commands.
+- `chirp.amplitude_rad` and `chirp.direction` stay three-element vectors in that
+  same joint order. All legs share the frequency, duration and envelope.
+- `chirp.phase_deg` sets the three joint phases in **degrees**. `[0, 90, 90]`
+  gives `sin / cos / cos`; `[0, 0, 0]` restores the original in-phase sweep.
+  Older configs without this field default to `[0, 0, 0]`. Phase settings also
+  apply to single-leg collection.
+- `control.kp` and `control.kd` also stay three-element vectors, shared by all legs.
+- The complete reference pose plus chirp is mirrored as below, in logical joint
+  coordinates before motor offsets are added. Rear pitch centers change sign.
+
+| Leg | abad | thigh | calf |
+| --- | --- | --- | --- |
+| FL | a | b | c |
+| FR | -a | b | c |
+| RL | a | -b | -c |
+| RR | -a | -b | -c |
+
+For example, the current three-joint excitation is configured as:
+
+```json
+"amplitude_rad": [0.2, 0.1, 0.45],
+"phase_deg": [0.0, 90.0, 90.0],
+"direction": [1.0, 1.0, 1.0]
+```
+
+The reference target is `center + envelope * amplitude * direction * sin(phase +
+phase_offset)`. The envelope smoothly introduces and removes the cosine offsets,
+so the sweep starts and ends at the hold pose. The horizontal foot trace can be
+approximately elliptical; its shape and changing height follow the leg geometry.
+Four-leg mirroring applies to the entire target, irrespective of joint phase.
+
+The approach starts from measured positions and can be asymmetric. Its duration
+is automatically extended when needed to respect `hold.max_command_velocity_rad_s`.
+The final hold and sweep targets are mirrored. Each leg must pass the existing
+hold gate before the sweep begins. Mirroring targets reduces horizontal reactions
+and moments in the model; vertical reactions are not cancelled or an acceptance
+criterion here. Real tracking and fixture motion still require operator validation.
+
+After the installation and read-only checks below, run these commands **manually**:
+
+```bash
+.venv-hardware/bin/pace-dobot hold --leg ALL
+.venv-hardware/bin/pace-dobot collect-chirp --leg ALL
+```
+
+Each command prints the actual four-leg hold pose, joint sweep limits, approach
+duration, PD gains and output path, plus the sweep amplitude, phase and frequency
+before collection, then requires `ARM ALL <TOKEN>` once before
+creating one DDS writer. Inspect the mirrored rear-leg pose and clearance before
+confirming. All 12 joints are sent in one command at 400 Hz. Any safety or hold-gate
+failure aborts the collection and sends bounded damping to all four legs.
+The raw NPZ metadata records the actual `chirp` settings, including `phase_deg`.
+Conversion and fitting replay the saved joint targets rather than regenerating
+them from the current config.
+
+Collection prints a timestamped `data/dobot/all/all_collect_<timestamp>.npz` path.
+Replace the placeholders below with actual paths; these steps are offline:
+
+```bash
+uv run python scripts/pace/dobot.py convert data/dobot/all/all_collect_<timestamp>.npz
+uv run python scripts/pace/dobot.py fit \
+  --data data/dobot/all/all_collect_<timestamp>.pt --num_envs 64
+uv run python scripts/pace/dobot.py evaluate \
+  data/dobot/all/held_out.pt logs/pace/dobot_all/<run>/best_params.pt \
+  --plot logs/pace/dobot_all/<run>/held_out.png \
+  --output logs/pace/dobot_all/<run>/held_out.json
+```
+
+For held-out validation, collect and convert a second mirrored sweep with a
+reviewed different amplitude or frequency. New PT files carry their actual PD
+gains in `.pt.json`; copy **both files** to the fitting computer. Fitting and
+validation infer `ALL` and use those gains automatically. The result has 49
+parameters: 12 armatures, 12 passive damping values, 12 friction values, 12 encoder
+biases and one shared effective PACE torque delay. `--num_envs` counts candidate
+parameter sets, not legs. The report includes per-leg errors; the figure has four
+rows (FL/FR/RL/RR) and three columns (abad/thigh/calf).
+
+Older captures without recorded gains require `--config <original-config.json>`
+for both `fit` and `evaluate`; a hash mismatch is rejected. For old conversion
+manifests without a config hash, the original NPZ must also remain available.
 
 ## Files and responsibilities
 
@@ -17,7 +100,7 @@ is not physical validation.
 | --- | --- |
 | `src/pace_sim2real/dobot.py` | Dependency-free joint order, leg groups, limits, and timestep. |
 | `src/pace_sim2real/assets/dobot_asset.py` | Fixed-base, contact-free MJLab model and selected-leg PACE actuator. |
-| `src/pace_sim2real/tasks/manager_based/pace/dobot_pace_env_cfg.py` | Four registered single-leg fitting tasks and 13-parameter bounds. |
+| `src/pace_sim2real/tasks/manager_based/pace/dobot_pace_env_cfg.py` | Single-leg (13 parameters) and ALL (49 parameters) fitting tasks. |
 | `config/dobot_hardware.json` | DDS mapping, offsets, gains, trajectory, and abort thresholds. |
 | `src/pace_sim2real/hardware/dobot.py` | Lower-state reader and explicitly enabled lower-command writer. |
 | `src/pace_sim2real/hardware/excitation.py` | Smooth approach, hold gate, and tapered chirp. |
@@ -59,8 +142,8 @@ sync the full mjlab project environment.
 | --- | --- | --- | --- |
 | `doctor` | Hardware only | No endpoint | Host check report |
 | `observe` | Hardware only | State reader only | State report |
-| `hold --leg LEG` | Hardware only | Command writer; moves the selected leg | Raw hold NPZ |
-| `collect-chirp --leg LEG` | Hardware only | Command writer; moves the selected leg | Raw collection NPZ |
+| `hold --leg LEG` | Hardware only | Command writer; moves the selected leg(s) | Raw hold NPZ |
+| `collect-chirp --leg LEG` | Hardware only | Command writer; moves the selected leg(s) | Raw collection NPZ |
 | `convert` | Normal mjlab environment | No DDS | PACE PT and JSON sidecar |
 | `fit` | Normal mjlab environment | No DDS | CMA-ES parameters and logs |
 | `evaluate` | Normal mjlab environment | No DDS | Held-out metrics |
@@ -113,7 +196,7 @@ gate, chirp, and bounded damping exit:
 
 Both commands display the live state and trajectory envelope, then require one
 short `ARM <LEG> <TOKEN>` confirmation.  No writer exists before that prompt is
-matched.  The other nine joints are present in the whole-body message with
+matched.  In single-leg mode, the other nine joints are present in the whole-body message with
 `Kp=0`, `Kd=0`, and `tau=0`; they require mechanical support.
 
 The collection command writes raw data by default to:
@@ -144,7 +227,8 @@ uv run python scripts/pace/dobot.py fit \
 The conversion sidecar records the source/output hashes and joint order.  The
 workflow infers the leg and internal mjlab task from this sidecar.  Supplying
 `--leg` is optional for fitting and evaluation, but a conflicting value is
-rejected.  Without a sidecar, `--leg` is required.
+rejected. Dobot fitting and evaluation require the conversion sidecar to recover
+joint order and captured gains.
 `host_time_ns` is callback arrival time rather than a robot sampling timestamp,
 and `tau_est` is retained only as a diagnostic signal, not calibrated torque
 ground truth.
@@ -164,9 +248,10 @@ uv run python scripts/pace/dobot.py evaluate \
   --output logs/pace/dobot_fl/<run>/held_out.json
 ```
 
-The optional `--config` applies the capture's `control.kp` and `control.kd` to
-the simulation.  It also verifies the configuration hash recorded in the raw
-capture, so preserve one local configuration per experiment until evaluation
+New captures automatically supply their recorded `control.kp` and `control.kd`
+to fitting and evaluation. The optional `--config` is needed for older captures;
+it verifies the recorded configuration hash and rejects disagreement with any
+recorded gains. Preserve one local configuration per experiment until validation
 is complete.  The desired positions already contain the exact center,
 amplitude, and frequency sent to hardware; evaluation replays those samples
 rather than regenerating a nominal chirp.  `--plot` overlays target, real, and

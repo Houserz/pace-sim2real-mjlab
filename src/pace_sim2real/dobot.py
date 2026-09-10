@@ -22,7 +22,10 @@ DOBOT_LEG_INDICES = {
     "FR": (3, 4, 5),
     "RL": (6, 7, 8),
     "RR": (9, 10, 11),
+    "ALL": tuple(range(12)),
 }
+# Logical joint angles, before the DDS motor offsets: FL, FR, RL, RR.
+DOBOT_MIRROR_SIGNS = ((1, 1, 1), (-1, 1, 1), (1, -1, -1), (-1, -1, -1))
 DOBOT_LEG_JOINTS = {
     leg: tuple(DOBOT_JOINT_ORDER[index] for index in indices)
     for leg, indices in DOBOT_LEG_INDICES.items()
@@ -51,7 +54,7 @@ DOBOT_XML_SHA256 = "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7
 
 
 def normalize_leg(leg: str) -> str:
-    """Return one supported single-leg identifier."""
+    """Return a single leg or the explicit four-leg selection ALL."""
     normalized = leg.upper()
     if normalized not in DOBOT_LEG_INDICES:
         raise ValueError(f"unknown Dobot leg {leg!r}; choose from {tuple(DOBOT_LEG_INDICES)}")

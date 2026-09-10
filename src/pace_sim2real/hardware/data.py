@@ -15,6 +15,7 @@ from pace_sim2real.dobot import (
     DOBOT_LEG_JOINTS,
     normalize_leg,
 )
+from pace_sim2real.hardware.config import load_config
 from pace_sim2real.hardware.dobot import StateSample
 
 CAPTURE_SCHEMA = "pace_dobot_capture_v1"
@@ -121,6 +122,11 @@ def convert_capture(
     sidecar = destination.with_suffix(destination.suffix + ".json")
     if not overwrite and (destination.exists() or sidecar.exists()):
         raise FileExistsError(f"output exists: {destination} or {sidecar}")
+    control = (
+        _control_vectors(capture["metadata"]["control"], len(indices))
+        if "control" in capture["metadata"]
+        else None
+    )
     import torch
 
     dt = float(capture["metadata"]["physics_dt"])
@@ -146,6 +152,72 @@ def convert_capture(
         "samples": sample_count,
         "physics_dt": dt,
         "included_phases": ["prehold", "chirp", "posthold"],
+        "config_sha256": capture["metadata"].get("config_sha256"),
     }
+    if control is not None:
+        manifest["control"] = control
     sidecar.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return destination, sidecar
+
+
+def _control_vectors(control: dict[str, Any], count: int) -> dict[str, list[float]]:
+    result = {}
+    for key in ("kp", "kd"):
+        values = np.asarray(control[key], dtype=np.float64)
+        if values.shape == (3,) and count == 12:
+            values = np.tile(values, 4)
+        if values.shape != (count,) or not np.isfinite(values).all() or np.any(values < 0):
+            raise ValueError(f"control.{key} must contain {count} finite non-negative gains")
+        result[key] = values.tolist()
+    return result
+
+
+def load_hardware_config(data_path: Path, config_path: Path) -> dict[str, Any]:
+    """Verify an explicit config against the conversion/capture's recorded hash."""
+    sidecar = data_path.expanduser().resolve().with_suffix(data_path.suffix + ".json")
+    if not sidecar.is_file():
+        raise ValueError(f"--config requires the conversion manifest: {sidecar}")
+    manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+    expected = manifest.get("config_sha256")
+    if expected is None:
+        source = Path(str(manifest.get("source", ""))).expanduser()
+        if not source.is_file():
+            raise ValueError(f"converted data source capture is unavailable: {source}")
+        if manifest.get("source_sha256") != sha256(source):
+            raise ValueError(f"source capture hash does not match conversion manifest: {source}")
+        expected = load_capture(source)["metadata"].get("config_sha256")
+    config = load_config(config_path)
+    if expected != sha256(config["_path"]):
+        raise ValueError("hardware config does not match the capture")
+    return config
+
+
+def load_dobot_control(
+    data_path: Path,
+    joint_order: list[str],
+    config_path: Path | None = None,
+    *,
+    required: bool = False,
+) -> dict[str, list[float]] | None:
+    """Read portable captured gains; old captures require their explicit config."""
+    sidecar = data_path.with_suffix(data_path.suffix + ".json")
+    manifest = json.loads(sidecar.read_text(encoding="utf-8")) if sidecar.is_file() else {}
+    if manifest.get("schema") != "pace_dobot_conversion_v1":
+        if required or config_path is not None:
+            raise ValueError("Dobot fitting requires a .pt.json conversion manifest")
+        return None
+    if manifest.get("joint_order") != joint_order:
+        raise ValueError("data manifest joint_order does not match the selected task")
+    if manifest.get("output_sha256") != sha256(data_path):
+        raise ValueError("PACE data hash does not match the conversion manifest")
+    count = len(joint_order)
+    control = _control_vectors(manifest["control"], count) if "control" in manifest else None
+    if config_path is not None:
+        config = load_hardware_config(data_path, config_path)
+        supplied = _control_vectors(config["control"], count)
+        if control is not None and control != supplied:
+            raise ValueError("--config PD gains disagree with the recorded control gains")
+        control = supplied
+    if control is None:
+        raise ValueError("capture has no recorded PD gains; pass --config with its original config")
+    return control
