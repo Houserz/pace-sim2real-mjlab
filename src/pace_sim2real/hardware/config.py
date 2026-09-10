@@ -88,6 +88,10 @@ def validate_config(config: dict[str, Any]) -> None:
     for name, value in positive.items():
         if float(value) <= 0:
             raise ValueError(f"{name} must be positive")
+    for key in ("pre_hold_s", "post_hold_s"):
+        value = float(config["chirp"][key])
+        if not np.isfinite(value) or value < 0:
+            raise ValueError(f"chirp.{key} must be finite and non-negative")
     if float(config["chirp"]["max_frequency_hz"]) < float(config["chirp"]["min_frequency_hz"]):
         raise ValueError("chirp.max_frequency_hz must be >= chirp.min_frequency_hz")
     if 2.0 * float(config["chirp"]["ramp_s"]) > float(config["chirp"]["duration_s"]):

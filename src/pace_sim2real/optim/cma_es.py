@@ -136,6 +136,9 @@ class CMAESOptimizer:
         self._last_best_params: torch.Tensor | None = None
         self._last_best_trajectory: torch.Tensor | None = None
         self._last_best_score: torch.Tensor | None = None
+        self._best_params: torch.Tensor | None = None
+        self._best_trajectory: torch.Tensor | None = None
+        self._best_score: torch.Tensor | None = None
         if save_optimization_process:
             self.sim_params_buffer = torch.zeros(
                 (max_iteration, population_size, self.bounds.shape[0]), device=device
@@ -199,6 +202,10 @@ class CMAESOptimizer:
         self._last_best_params = self.sim_params[min_index].detach().cpu().clone()
         self._last_best_trajectory = self.sim_dof_pos_buffer[min_index].detach().cpu().clone()
         self._last_best_score = self.scores[min_index].detach().cpu().clone()
+        if self._best_score is None or self._last_best_score < self._best_score:
+            self._best_params = self._last_best_params
+            self._best_trajectory = self._last_best_trajectory
+            self._best_score = self._last_best_score
 
         solutions = [
             (self.params[i].detach().cpu().numpy(), self.scores[i].item())
@@ -307,7 +314,10 @@ class CMAESOptimizer:
         return self.bounds[:, 0] + normalized * (self.bounds[:, 1] - self.bounds[:, 0])
 
     def get_best_sim_params(self) -> torch.Tensor:
-        return self._params_to_sim_params(torch.tensor(self.optimizer._mean, device=self.device))
+        """Return the lowest-loss evaluated candidate across completed generations."""
+        if self._best_params is None:
+            raise RuntimeError("cannot get best parameters before evolve()")
+        return self._best_params.to(device=self.device).clone()
 
     def _print_iteration(self) -> None:
         min_score, min_index = torch.min(self.scores, dim=0)
@@ -394,8 +404,8 @@ class CMAESOptimizer:
         ):
             raise RuntimeError("cannot save a population checkpoint before evolve()")
         run_dir = Path(self.writer.log_dir)
-        torch.save(self._last_best_trajectory, run_dir / "best_trajectory.pt")
-        torch.save(self._last_best_params, run_dir / "best_trajectory_params.pt")
+        torch.save(self._best_trajectory, run_dir / "best_trajectory.pt")
+        torch.save(self._best_params, run_dir / "best_trajectory_params.pt")
         torch.save(
             {
                 "params": self._last_best_params,
@@ -408,7 +418,11 @@ class CMAESOptimizer:
         torch.save(mean.detach().cpu(), run_dir / f"mean_{iteration:03}.pt")
         if finished:
             torch.save(
-                {"params": self._last_best_params, "joint_order": self.joint_order},
+                {
+                    "params": self._best_params,
+                    "score": self._best_score,
+                    "joint_order": self.joint_order,
+                },
                 run_dir / "best_params.pt",
             )
         if finished and self.save_optimization_process:

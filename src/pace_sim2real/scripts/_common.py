@@ -9,7 +9,14 @@ import torch
 from mjlab.envs import ManagerBasedRlEnv
 from mjlab.tasks.registry import load_env_cfg
 
-from pace_sim2real.utils import PaceDCMotor, apply_pace_parameters, bind_environment, project_root
+from pace_sim2real.hardware.data import load_dobot_control
+from pace_sim2real.utils import (
+    PaceDCMotor,
+    apply_pace_parameters,
+    bind_environment,
+    load_pace_artifact,
+    project_root,
+)
 
 
 def resolve_device(device: str | None) -> str:
@@ -214,6 +221,29 @@ def estimate_cmaes_trajectory_memory(
 ) -> int:
     """Return the lower-bound bytes reserved only for CMA-ES position history."""
     return population_size * samples * joint_count * bytes_per_value
+
+
+def load_pace_trajectory(
+    source: Path,
+    *,
+    joint_order: list[str],
+    physics_dt: float,
+    device: str,
+    config_path: Path | None = None,
+    require_dobot: bool = False,
+) -> tuple[dict[str, torch.Tensor], dict[str, list[float]] | None]:
+    """Load the same validated trajectory and captured gains for fit and replay."""
+    source = source.expanduser().resolve()
+    control = load_dobot_control(source, joint_order, config_path, required=require_dobot)
+    data = load_pace_artifact(source, map_location=device)
+    time, measured, target = validate_pace_trajectory_data(
+        data, physics_dt=physics_dt, joint_count=len(joint_order)
+    )
+    return {
+        "time": time.to(device),
+        "dof_pos": measured.to(device),
+        "des_dof_pos": target.to(device),
+    }, control
 
 
 def data_path(data_dir: str) -> Path:

@@ -9,17 +9,16 @@ from pathlib import Path
 import torch
 
 from pace_sim2real.dobot import DOBOT_LEG_INDICES
-from pace_sim2real.hardware.data import load_dobot_control
 from pace_sim2real.utils import load_pace_artifact, require_tensor
 
 from ._common import (
     apply_pd_gains,
+    load_pace_trajectory,
     make_env,
     pace_joint_ids,
     pace_position_action,
     prepare_pace_model,
     resolve_device,
-    validate_pace_trajectory_data,
 )
 
 
@@ -137,16 +136,15 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         robot = env.scene["robot"]
         joint_order = list(env.cfg.sim2real.joint_order)
         joint_ids = pace_joint_ids(robot, joint_order, device)
-        data = load_pace_artifact(args.data, map_location=device)
-        time, measured, target = validate_pace_trajectory_data(
-            data, physics_dt=env.physics_dt, joint_count=len(joint_order)
+        data, control = load_pace_trajectory(
+            args.data,
+            joint_order=joint_order,
+            physics_dt=env.physics_dt,
+            device=device,
+            config_path=args.config,
+            require_dobot=args.task.startswith("Dobot-Pace-"),
         )
-        time = time.to(device)
-        measured = measured.to(device)
-        target = target.to(device)
-        control = load_dobot_control(
-            args.data, joint_order, args.config, required=args.task.startswith("Dobot-Pace-")
-        )
+        time, measured, target = data["time"], data["dof_pos"], data["des_dof_pos"]
         if control is not None:
             apply_pd_gains(robot, joint_ids, control)
         fitted = _load_parameters(args.parameters, joint_order, device)

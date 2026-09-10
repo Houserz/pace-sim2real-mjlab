@@ -6,6 +6,7 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
+from types import SimpleNamespace
 
 import mujoco
 import numpy as np
@@ -26,7 +27,7 @@ from pace_sim2real.hardware.cli import (
 from pace_sim2real.hardware.cli import (
     build_parser as build_hardware_parser,
 )
-from pace_sim2real.hardware.config import load_config
+from pace_sim2real.hardware.config import load_config, validate_config
 from pace_sim2real.hardware.data import (
     convert_capture,
     load_capture,
@@ -453,14 +454,39 @@ def test_all_conversion_carries_gains_without_source_capture(tmp_path: Path) -> 
         load_dobot_control(output, list(DOBOT_LEG_JOINTS["ALL"]), required=True)
 
 
-@pytest.mark.parametrize("abort", [False, True])
-def test_all_active_capture_gates_chirp_and_always_damps(tmp_path, monkeypatch, abort) -> None:
+@pytest.mark.parametrize("pre_hold_s", [2.0, 0.0, 0.001])
+@pytest.mark.parametrize("outcome", ["completed", "hold_failure", "missing_hold"])
+def test_all_active_capture_gates_chirp_and_always_damps(
+    tmp_path, monkeypatch, pre_hold_s, outcome
+) -> None:
     from pace_sim2real.hardware import cli
 
     config = load_config(ROOT / "config/dobot_hardware.json")
-    target = np.zeros(12)
-    phases = np.array(["approach", "hold", "hold", "prehold", "chirp", "posthold"])
+    config["hold"].update(ramp_s=0.005, duration_s=0.005)
+    config["chirp"].update(pre_hold_s=pre_hold_s, duration_s=0.01, ramp_s=0.0025, post_hold_s=0)
+    target = (np.asarray(config["hold"]["target_joint_pos"][:3]) * DOBOT_MIRROR_SIGNS).reshape(12)
+    _, _, phases = generate_identification(config, target, "ALL")
+    gate_index = int(np.flatnonzero(phases == "hold")[-1]) + 1
     instances = []
+    gate_calls = []
+    clock_ns = 10_000_000_000
+
+    def monotonic_ns():
+        nonlocal clock_ns
+        clock_ns += 1000
+        return clock_ns
+
+    def sleep(duration):
+        nonlocal clock_ns
+        clock_ns += round(duration * 1e9)
+
+    monkeypatch.setattr(
+        cli,
+        "time",
+        SimpleNamespace(
+            monotonic=lambda: monotonic_ns() / 1e9, monotonic_ns=monotonic_ns, sleep=sleep
+        ),
+    )
 
     class FakeTransport:
         def __init__(self, config):
@@ -468,11 +494,12 @@ def test_all_active_capture_gates_chirp_and_always_damps(tmp_path, monkeypatch, 
             self.published = []
             self.damped = []
             self.writer_enabled = False
+            self.q = target.copy()
             instances.append(self)
 
         def latest(self):
             sample = StateSample(
-                time.monotonic_ns(), target.copy(), target.copy(), target.copy(), target.copy()
+                monotonic_ns(), self.q.copy(), np.zeros(12), np.zeros(12), np.zeros(12)
             )
             self.samples.append(sample)
             return sample
@@ -498,6 +525,7 @@ def test_all_active_capture_gates_chirp_and_always_damps(tmp_path, monkeypatch, 
         def publish_position(self, q, leg):
             assert self.writer_enabled and leg == "ALL"
             self.published.append(q.copy())
+            self.q = q.copy()
             self.latest()
 
         def publish_damping(self, leg):
@@ -513,35 +541,53 @@ def test_all_active_capture_gates_chirp_and_always_damps(tmp_path, monkeypatch, 
     def confirm(leg, mode):
         assert leg == "ALL" and not instances[-1].writer_enabled
 
+    def hold_gate(*args):
+        gate_calls.append(len(instances[-1].published))
+        return ("RL: hold position span exceeds limit" if outcome == "hold_failure" else None, {})
+
     monkeypatch.setattr(cli, "DobotDDS", FakeTransport)
     monkeypatch.setattr(cli, "_confirm_active", confirm)
-    monkeypatch.setattr(
-        cli,
-        "generate_identification",
-        lambda *args: (
-            np.arange(len(phases)) * config["physics_dt"],
-            np.zeros((len(phases), 12)),
-            phases,
-        ),
-    )
-    monkeypatch.setattr(
-        cli,
-        "hold_stability",
-        lambda *args: ("RL: hold position span exceeds limit" if abort else None, {}),
-    )
+    monkeypatch.setattr(cli, "hold_stability", hold_gate)
+    if outcome == "missing_hold":
+
+        def missing_hold(*args):
+            times, targets, generated_phases = generate_identification(*args)
+            generated_phases[np.flatnonzero(generated_phases == "hold")[-1]] = "approach"
+            return times, targets, generated_phases
+
+        monkeypatch.setattr(cli, "generate_identification", missing_hold)
+
     output = tmp_path / "capture.npz"
-    if abort:
-        with pytest.raises(RuntimeError, match="hold gate failed: RL"):
-            cli.active(config, "collect", "ALL", output, False)
-    else:
+    if outcome == "completed":
         assert cli.active(config, "collect", "ALL", output, False) == 0
+    else:
+        expected = "hold gate failed: RL" if outcome == "hold_failure" else "hold gate"
+        with pytest.raises(RuntimeError, match=expected):
+            cli.active(config, "collect", "ALL", output, False)
     transport = instances[-1]
     assert transport.damped == ["ALL"]
-    assert len(transport.published) == (3 if abort else len(phases))
+    assert gate_calls == ([] if outcome == "missing_hold" else [gate_index])
+    assert len(transport.published) == (len(phases) if outcome == "completed" else gate_index)
     capture = load_capture(output, require_eligible=False)
-    assert capture["metadata"]["eligible_for_fit"] == (not abort)
+    assert capture["metadata"]["eligible_for_fit"] == (outcome == "completed")
     assert capture["metadata"]["control"]["kp"] == config["control"]["kp"]
     assert capture["metadata"]["chirp"] == config["chirp"]
-    if abort:
-        assert "RL" in capture["metadata"]["error"]
+    if outcome == "completed":
+        np.testing.assert_array_equal(capture["phase"], phases)
+    else:
         assert "chirp" not in capture["phase"]
+        if outcome == "hold_failure":
+            assert "RL" in capture["metadata"]["error"]
+
+
+def test_chirp_hold_durations_must_be_finite_and_nonnegative() -> None:
+    config = load_config(ROOT / "config/dobot_hardware.json")
+    for key in ("pre_hold_s", "post_hold_s"):
+        original = config["chirp"][key]
+        for value in (-1.0, float("nan"), float("inf"), -float("inf")):
+            config["chirp"][key] = value
+            with pytest.raises(ValueError, match=key):
+                validate_config(config)
+        for value in (0.0, 0.001, original):
+            config["chirp"][key] = value
+            validate_config(config)

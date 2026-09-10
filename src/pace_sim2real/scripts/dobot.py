@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 from pathlib import Path
@@ -59,27 +58,11 @@ def _extract_leg(args: list[str]) -> tuple[str | None, list[str]]:
     return leg, remaining
 
 
-def _manifest_leg(data: Path | None) -> str | None:
-    if data is None:
-        return None
-    sidecar = data.expanduser().resolve().with_suffix(data.suffix + ".json")
-    if not sidecar.is_file():
-        return None
-    manifest = json.loads(sidecar.read_text(encoding="utf-8"))
-    value = manifest.get("leg")
-    return normalize_leg(str(value)) if value is not None else None
-
-
 def resolve_leg(selected: str | None, data: Path | None) -> str:
-    """Resolve one leg and reject CLI/data-manifest disagreement."""
-    selected = normalize_leg(selected) if selected is not None else None
-    recorded = _manifest_leg(data)
-    if selected is not None and recorded is not None and selected != recorded:
-        raise ValueError(f"--leg {selected} disagrees with data manifest leg {recorded}")
-    leg = selected or recorded
-    if leg is None:
-        raise ValueError("pass --leg, or provide data with a .pt.json conversion manifest")
-    return leg
+    """Keep CLI imports light while sharing the capture's leg validation."""
+    from pace_sim2real.hardware.data import resolve_leg as resolve_capture_leg
+
+    return resolve_capture_leg(selected, data)
 
 
 def _hardware_python() -> Path:

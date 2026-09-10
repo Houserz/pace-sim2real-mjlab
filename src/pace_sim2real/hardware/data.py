@@ -172,12 +172,42 @@ def _control_vectors(control: dict[str, Any], count: int) -> dict[str, list[floa
     return result
 
 
-def load_hardware_config(data_path: Path, config_path: Path) -> dict[str, Any]:
-    """Verify an explicit config against the conversion/capture's recorded hash."""
+def _load_manifest(data_path: Path) -> dict[str, Any]:
     sidecar = data_path.expanduser().resolve().with_suffix(data_path.suffix + ".json")
     if not sidecar.is_file():
-        raise ValueError(f"--config requires the conversion manifest: {sidecar}")
+        return {}
     manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise ValueError(f"conversion manifest must be a JSON object: {sidecar}")
+    if manifest.get("leg") is not None:
+        manifest["leg"] = normalize_leg(str(manifest["leg"]))
+        if "joint_order" in manifest and manifest["joint_order"] != list(
+            DOBOT_LEG_JOINTS[manifest["leg"]]
+        ):
+            raise ValueError("data manifest leg and joint_order disagree")
+    return manifest
+
+
+def resolve_leg(selected: str | None, data: Path | None) -> str:
+    """Resolve the capture leg with the same manifest interpretation as fitting."""
+    selected = normalize_leg(selected) if selected is not None else None
+    recorded = _load_manifest(data).get("leg") if data is not None else None
+    if selected is not None and recorded is not None and selected != recorded:
+        raise ValueError(f"--leg {selected} disagrees with data manifest leg {recorded}")
+    leg = selected or recorded
+    if leg is None:
+        raise ValueError("pass --leg, or provide data with a .pt.json conversion manifest")
+    return leg
+
+
+def load_hardware_config(data_path: Path, config_path: Path) -> dict[str, Any]:
+    """Verify an explicit config against the conversion/capture's recorded hash."""
+    return _hardware_config_from_manifest(_load_manifest(data_path), config_path)
+
+
+def _hardware_config_from_manifest(manifest: dict[str, Any], config_path: Path) -> dict[str, Any]:
+    if not manifest:
+        raise ValueError("--config requires the conversion manifest")
     expected = manifest.get("config_sha256")
     if expected is None:
         source = Path(str(manifest.get("source", ""))).expanduser()
@@ -200,20 +230,19 @@ def load_dobot_control(
     required: bool = False,
 ) -> dict[str, list[float]] | None:
     """Read portable captured gains; old captures require their explicit config."""
-    sidecar = data_path.with_suffix(data_path.suffix + ".json")
-    manifest = json.loads(sidecar.read_text(encoding="utf-8")) if sidecar.is_file() else {}
+    manifest = _load_manifest(data_path)
+    if manifest and manifest.get("joint_order") != joint_order:
+        raise ValueError("data manifest joint_order does not match the selected task")
     if manifest.get("schema") != "pace_dobot_conversion_v1":
         if required or config_path is not None:
             raise ValueError("Dobot fitting requires a .pt.json conversion manifest")
         return None
-    if manifest.get("joint_order") != joint_order:
-        raise ValueError("data manifest joint_order does not match the selected task")
     if manifest.get("output_sha256") != sha256(data_path):
         raise ValueError("PACE data hash does not match the conversion manifest")
     count = len(joint_order)
     control = _control_vectors(manifest["control"], count) if "control" in manifest else None
     if config_path is not None:
-        config = load_hardware_config(data_path, config_path)
+        config = _hardware_config_from_manifest(manifest, config_path)
         supplied = _control_vectors(config["control"], count)
         if control is not None and control != supplied:
             raise ValueError("--config PD gains disagree with the recorded control gains")

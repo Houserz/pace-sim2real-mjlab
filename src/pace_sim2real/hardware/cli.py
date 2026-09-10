@@ -263,13 +263,9 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
                 lag_ms = (time.monotonic() - deadline) * 1.0e3
                 if lag_ms > float(config["safety"]["max_schedule_lag_ms"]):
                     raise RuntimeError(f"control schedule lag {lag_ms:.3f} ms exceeds limit")
-                if (
-                    mode == "collect"
-                    and not hold_checked
-                    and index > 0
-                    and phases[index - 1] == "hold"
-                    and phases[index] == "prehold"
-                ):
+                if mode == "collect" and not hold_checked and phases[index] in ("prehold", "chirp"):
+                    if index == 0 or phases[index - 1] != "hold":
+                        raise RuntimeError("hold gate requires a completed hold phase before chirp")
                     reason, hold_metrics = hold_stability(
                         config,
                         transport.recent(float(config["hold"]["stability_window_s"]) + 0.25),

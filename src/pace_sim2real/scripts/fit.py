@@ -9,17 +9,16 @@ from pathlib import Path
 import torch
 
 from pace_sim2real import CMAESOptimizer
-from pace_sim2real.hardware.data import load_dobot_control
-from pace_sim2real.utils import load_pace_artifact, project_root
+from pace_sim2real.utils import project_root
 
 from ._common import (
     apply_pd_gains,
     estimate_cmaes_trajectory_memory,
+    load_pace_trajectory,
     make_env,
     pace_joint_ids,
     pace_position_action,
     resolve_device,
-    validate_pace_trajectory_data,
 )
 
 
@@ -67,29 +66,18 @@ def run(args: argparse.Namespace) -> torch.Tensor:
                 f"No excitation data at {source}. Run scripts/pace/data_collection.py first "
                 "or pass --data."
             )
-        data = load_pace_artifact(source, map_location=device)
-        sidecar = source.with_suffix(source.suffix + ".json")
-        if sidecar.exists():
-            manifest = json.loads(sidecar.read_text(encoding="utf-8"))
-            if manifest.get("joint_order") != list(sim2real.joint_order):
-                raise ValueError(
-                    "data manifest joint_order does not match the selected task: "
-                    f"{manifest.get('joint_order')} != {list(sim2real.joint_order)}"
-                )
-        control = load_dobot_control(
+        data, control = load_pace_trajectory(
             source,
-            list(sim2real.joint_order),
-            args.config,
-            required=args.task.startswith("Dobot-Pace-"),
+            joint_order=list(sim2real.joint_order),
+            physics_dt=env.physics_dt,
+            device=device,
+            config_path=args.config,
+            require_dobot=args.task.startswith("Dobot-Pace-"),
         )
         if control is not None:
             apply_pd_gains(robot, joint_ids, control)
             print(f"[INFO] Captured PD gains: {control}")
-        time, measured, target = validate_pace_trajectory_data(
-            data, physics_dt=env.physics_dt, joint_count=len(joint_ids)
-        )
-        measured = measured.to(device=device)
-        target = target.to(device=device)
+        time, measured, target = data["time"], data["dof_pos"], data["des_dof_pos"]
         history_bytes = estimate_cmaes_trajectory_memory(
             population_size=env.num_envs, samples=len(measured), joint_count=len(joint_ids)
         )

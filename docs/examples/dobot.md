@@ -257,10 +257,13 @@ amplitude, and frequency sent to hardware; evaluation replays those samples
 rather than regenerating a nominal chirp.  `--plot` overlays target, real, and
 simulated joint positions.
 
-`best_params.pt` is the best sampled population member.  `mean_*.pt` is the
-CMA-ES distribution mean.  Each `population_best_*.pt` bundles a score,
-parameter vector, and its matching trajectory, avoiding ambiguity between a
-mean parameter vector and another candidate's trajectory.
+`best_params.pt` contains the lowest-loss evaluated candidate across all
+completed generations and its score, matching the parameters printed and
+returned by fitting.  `best_trajectory.pt` and `best_trajectory_params.pt`
+refer to that same candidate at the latest checkpoint.  `mean_*.pt` remains
+the CMA-ES distribution mean, which is not necessarily an evaluated candidate.
+Each `population_best_*.pt` bundles the score, parameter vector, and matching
+trajectory of that generation's best candidate.
 
 Passing unit tests, bundle hashes, or a low training score does not establish a
 physical identification result.  Acceptance requires an eligible independent
