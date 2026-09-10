@@ -11,13 +11,13 @@
     "first_state_timeout_s": 10.0
   },
   "control": {
-    "kp": [40.0, 40.0, 40.0],
-    "kd": [1.8, 1.8, 1.8],
+    "kp": [25.0, 25.0, 25.0],
+    "kd": [1.3, 1.3, 1.3],
     "damping_kd": 3.0,
     "shutdown_damping_s": 0.25
   },
   "hold": {
-    "target_joint_pos": [0.05, 0.78, -1.20, 0.0, 0.84, -1.30, 0.0, 0.75, -1.22, 0.0, 0.75, -1.22],
+    "target_joint_pos": [0.0, -0.7, 1.20, 0.0, -0.7, 1.20, 0.0, 0.75, -1.22, 0.0, 0.75, -1.22],
     "ramp_s": 6.0,
     "duration_s": 3.0,
     "max_command_velocity_rad_s": 0.35,
@@ -29,12 +29,12 @@
   },
   "chirp": {
     "pre_hold_s": 2.0,
-    "duration_s": 20.0,
+    "duration_s": 30.0,
     "post_hold_s": 2.0,
     "min_frequency_hz": 0.1,
-    "max_frequency_hz": 3.0,
+    "max_frequency_hz": 4.0,
     "ramp_s": 2.0,
-    "amplitude_rad": [0.2, 0.1, 0.45],
+    "amplitude_rad": [0.2, 0.25, 0.4],
     "phase_deg": [0.0, 90.0, 90.0],
     "direction": [1.0, 1.0, 1.0]
   },

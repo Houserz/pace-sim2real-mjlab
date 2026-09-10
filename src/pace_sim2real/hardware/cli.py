@@ -71,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
             type=str.upper,
             choices=tuple(DOBOT_LEG_INDICES),
             required=True,
-            help="One leg, or ALL for simultaneous mirrored four-leg motion.",
+            help="One leg, or ALL for four-leg motion with mirrored chirp offsets.",
         )
         active.add_argument("--output", type=Path, default=None)
         active.add_argument("--overwrite", action="store_true")
@@ -186,7 +186,7 @@ def _confirm_active(leg: str, mode: str) -> None:
     if leg == "ALL":
         print("ALL moves FL, FR, RL and RR simultaneously (12 joints).")
         print("Fix the trunk and keep all four legs airborne with their sweep volumes clear.")
-        print("Review the mirrored rear-leg pose; vertical reactions are not cancelled.")
+        print("Review all four configured hold poses and sweep ranges.")
     else:
         print(f"Only {leg} is controlled; support the trunk and other legs, sweep volume clear.")
     print("the emergency stop ready, and no competing lower-command writer active.")
@@ -209,8 +209,8 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
     dt = float(config["physics_dt"])
     _trajectory_report(targets, leg, dt)
     if leg == "ALL":
-        print("ALL mirrors hold.target_joint_pos[:3] (FL); other hold entries are unused.")
-        print("Mirroring applies after approach; all four hold gates must pass before chirp.")
+        print("ALL uses all 12 hold.target_joint_pos values; only chirp offsets are mirrored.")
+        print("All four hold gates must pass before chirp.")
         print(
             f"Approach duration: {np.count_nonzero(phases == 'approach') * dt:.3f} s "
             "(automatically extended if needed to respect the hold speed limit)."
@@ -340,7 +340,7 @@ def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite:
         "leg": leg,
         "selected_indices": list(DOBOT_LEG_INDICES[leg]),
         "control": {key: vector(config, "control", key, 3).tolist() for key in ("kp", "kd")},
-        "trajectory_mode": "mirrored" if leg == "ALL" else "single_leg",
+        "trajectory_mode": "mirrored_offsets" if leg == "ALL" else "single_leg",
         "chirp": dict(config["chirp"]) if mode == "collect" else None,
         "error": str(active_error) if active_error is not None else None,
         "physics_dt": dt,

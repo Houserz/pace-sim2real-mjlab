@@ -1,7 +1,7 @@
 # Dobot Rover identification
 
 Use `FL`, `FR`, `RL`, or `RR` for one leg, or explicitly select `ALL` for
-simultaneous mirrored four-leg identification. Collection stays in the small
+simultaneous four-leg identification with mirrored chirp offsets. Collection stays in the small
 hardware environment; conversion, fitting and evaluation use the mjlab environment.
 
 `ALL` requires a fixed trunk and four airborne legs. Review and run a hold-only
@@ -11,8 +11,9 @@ trial before collecting. Software and model symmetry are not hardware acceptance
 
 The existing config is the only experiment configuration. In `ALL` mode:
 
-- `hold.target_joint_pos[:3]` is the FL reference pose `[abad, thigh, calf]`.
-  The other nine hold entries are used only for single-leg commands.
+- `hold.target_joint_pos` specifies all 12 center angles: FL, FR, RL, RR,
+  each ordered `[abad, thigh, calf]`. ALL uses these values directly, just as
+  single-leg commands do; it does not mirror or replace the hold centers.
 - `chirp.amplitude_rad` and `chirp.direction` stay three-element vectors in that
   same joint order. All legs share the frequency, duration and envelope.
 - `chirp.phase_deg` sets the three joint phases in **degrees**. `[0, 90, 90]`
@@ -20,8 +21,8 @@ The existing config is the only experiment configuration. In `ALL` mode:
   Older configs without this field default to `[0, 0, 0]`. Phase settings also
   apply to single-leg collection.
 - `control.kp` and `control.kd` also stay three-element vectors, shared by all legs.
-- The complete reference pose plus chirp is mirrored as below, in logical joint
-  coordinates before motor offsets are added. Rear pitch centers change sign.
+- Only the chirp offsets are mirrored as below, then added to each leg's
+  configured center. Here a, b, c are offsets, not absolute joint angles.
 
 | Leg | abad | thigh | calf |
 | --- | --- | --- | --- |
@@ -33,7 +34,7 @@ The existing config is the only experiment configuration. In `ALL` mode:
 For example, the current three-joint excitation is configured as:
 
 ```json
-"amplitude_rad": [0.2, 0.1, 0.45],
+"amplitude_rad": [0.2, 0.25, 0.4],
 "phase_deg": [0.0, 90.0, 90.0],
 "direction": [1.0, 1.0, 1.0]
 ```
@@ -42,14 +43,17 @@ The reference target is `center + envelope * amplitude * direction * sin(phase +
 phase_offset)`. The envelope smoothly introduces and removes the cosine offsets,
 so the sweep starts and ends at the hold pose. The horizontal foot trace can be
 approximately elliptical; its shape and changing height follow the leg geometry.
-Four-leg mirroring applies to the entire target, irrespective of joint phase.
+Four-leg mirroring applies to the offsets, irrespective of joint phase. Full
+spatial symmetry additionally requires mirrored centers. Independently configured
+centers need not satisfy that condition; the horizontal-force cancellation result
+for fully mirrored poses cannot be assumed for arbitrary centers.
 
 The approach starts from measured positions and can be asymmetric. Its duration
 is automatically extended when needed to respect `hold.max_command_velocity_rad_s`.
-The final hold and sweep targets are mirrored. Each leg must pass the existing
-hold gate before the sweep begins. Mirroring targets reduces horizontal reactions
-and moments in the model; vertical reactions are not cancelled or an acceptance
-criterion here. Real tracking and fixture motion still require operator validation.
+Each leg must pass the existing hold gate before the sweep begins. Horizontal
+reactions depend on the chosen centers and actual tracking. Vertical reactions
+are not an acceptance criterion here; fixture motion still requires operator
+validation.
 
 After the installation and read-only checks below, run these commands **manually**:
 
@@ -61,7 +65,7 @@ After the installation and read-only checks below, run these commands **manually
 Each command prints the actual four-leg hold pose, joint sweep limits, approach
 duration, PD gains and output path, plus the sweep amplitude, phase and frequency
 before collection, then requires `ARM ALL <TOKEN>` once before
-creating one DDS writer. Inspect the mirrored rear-leg pose and clearance before
+creating one DDS writer. Inspect all four configured poses and clearance before
 confirming. All 12 joints are sent in one command at 400 Hz. Any safety or hold-gate
 failure aborts the collection and sends bounded damping to all four legs.
 The raw NPZ metadata records the actual `chirp` settings, including `phase_deg`.

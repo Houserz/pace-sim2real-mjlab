@@ -79,8 +79,8 @@ small CPython 3.10 environment because the separately supplied vendor DDS
 binding is platform-specific; fitting remains in the normal mjlab environment.
 
 The operator workflow uses one explicit leg selection (`FL/FR/RL/RR`, or `ALL`
-for simultaneous mirrored four-leg collection). ALL mirrors the FL reference
-pose and chirp; it requires a fixed trunk and four airborne legs.  A collection-only
+for simultaneous four-leg collection). ALL uses all 12 configured hold centers
+and mirrors only chirp offsets; it requires a fixed trunk and four airborne legs.  A collection-only
 computer runs `doctor`, `observe`, `hold`, and `collect-chirp` directly through
 `.venv-hardware/bin/pace-dobot`; it does not need Torch, CUDA, or mjlab.
 Conversion, fitting, and evaluation use the normal-environment command

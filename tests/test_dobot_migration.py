@@ -298,18 +298,30 @@ def test_hardware_commands_require_leg_only_when_active() -> None:
     assert parser.parse_args(["hold", "--leg", "all"]).leg == "ALL"
 
 
-def test_all_trajectory_has_mirrored_feet_and_speed_limited_approach() -> None:
+def test_all_trajectory_uses_configured_centers_and_speed_limited_approach() -> None:
     config = load_config(ROOT / "config/dobot_hardware.json")
     dt = config["physics_dt"]
     _, targets, phases = generate_identification(config, np.asarray(DOBOT_DEFAULT_JOINT_POS), "ALL")
     hold = targets[phases == "hold"][-1]
-    reference = np.asarray(config["hold"]["target_joint_pos"][:3])
-    np.testing.assert_allclose(hold, (reference * np.asarray(DOBOT_MIRROR_SIGNS)).reshape(12))
+    np.testing.assert_allclose(hold, config["hold"]["target_joint_pos"])
+    for name in ("FL", "FR", "RL", "RR"):
+        _, single, single_phases = generate_identification(
+            config, np.asarray(DOBOT_DEFAULT_JOINT_POS), name
+        )
+        indices = list(DOBOT_LEG_INDICES[name])
+        np.testing.assert_allclose(single[single_phases == "hold"][-1, indices], hold[indices])
+    offsets = (targets[phases == "chirp"] - hold).reshape(-1, 4, 3)
+    np.testing.assert_allclose(offsets, offsets[:, :1] * np.asarray(DOBOT_MIRROR_SIGNS), atol=1e-14)
     approach = targets[np.isin(phases, ("approach", "hold"))]
     assert (
         np.max(np.abs(np.diff(approach, axis=0))) / dt
         <= config["hold"]["max_command_velocity_rad_s"]
     )
+    # Spatial mirroring requires mirrored centers as well as mirrored offsets.
+    config["hold"]["target_joint_pos"] = (
+        (np.array([0.05, 0.78, -1.2]) * np.asarray(DOBOT_MIRROR_SIGNS)).reshape(12).tolist()
+    )
+    _, targets, phases = generate_identification(config, np.asarray(DOBOT_DEFAULT_JOINT_POS), "ALL")
     model = get_spec().compile()
     data = mujoco.MjData(model)
     sites = [model.site(name).id for name in ("FL", "FR", "RL", "RR")]
