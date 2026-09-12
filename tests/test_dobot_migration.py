@@ -298,6 +298,18 @@ def test_hardware_commands_require_leg_only_when_active() -> None:
     assert parser.parse_args(["hold", "--leg", "all"]).leg == "ALL"
 
 
+def test_active_confirmation_only_requires_enter(monkeypatch) -> None:
+    from pace_sim2real.hardware import cli
+
+    prompts = []
+    monkeypatch.setattr(cli.sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr("builtins.input", lambda prompt: prompts.append(prompt))
+
+    cli._confirm_active("FL", "collect")
+
+    assert prompts == ["Press Enter to create the writer: "]
+
+
 def test_all_trajectory_uses_configured_centers_and_speed_limited_approach() -> None:
     config = load_config(ROOT / "config/dobot_hardware.json")
     dt = config["physics_dt"]

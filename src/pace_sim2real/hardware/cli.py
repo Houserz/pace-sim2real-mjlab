@@ -6,7 +6,6 @@ import argparse
 import gc
 import json
 import platform
-import secrets
 import subprocess
 import sys
 import time
@@ -180,8 +179,6 @@ def _trajectory_report(targets: np.ndarray, leg: str, dt: float) -> None:
 def _confirm_active(leg: str, mode: str) -> None:
     if not sys.stdin.isatty():
         raise PermissionError("active Dobot commands require an interactive terminal")
-    token = secrets.token_hex(2).upper()
-    phrase = f"ARM {leg} {token}"
     print(f"WARNING: {mode} creates a writer on rt/lower/cmd.")
     if leg == "ALL":
         print("ALL moves FL, FR, RL and RR simultaneously (12 joints).")
@@ -190,8 +187,7 @@ def _confirm_active(leg: str, mode: str) -> None:
     else:
         print(f"Only {leg} is controlled; support the trunk and other legs, sweep volume clear.")
     print("the emergency stop ready, and no competing lower-command writer active.")
-    if input(f"Type {phrase} to create the writer: ").strip() != phrase:
-        raise PermissionError("confirmation did not match; no writer was created")
+    input("Press Enter to create the writer: ")
 
 
 def active(config: dict[str, Any], mode: str, leg: str, output: Path, overwrite: bool) -> int:

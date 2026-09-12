@@ -87,7 +87,7 @@ Conversion, fitting, and evaluation use the normal-environment command
 `uv run python scripts/pace/dobot.py` and infer the leg from the converted data
 manifest. New captures also carry the actual PD gains for automatic use in
 fitting and evaluation; older captures require `--config`. Only `hold` and `collect-chirp` can create a command writer, and they
-require one interactive confirmation after displaying the selected leg,
+require pressing Enter once after displaying the selected leg,
 trajectory envelope, live state, and mechanical-support warning.  See [the
 Dobot guide](docs/examples/dobot.md) for the command/environment table.
 

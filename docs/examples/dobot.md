@@ -64,7 +64,7 @@ After the installation and read-only checks below, run these commands **manually
 
 Each command prints the actual four-leg hold pose, joint sweep limits, approach
 duration, PD gains and output path, plus the sweep amplitude, phase and frequency
-before collection, then requires `ARM ALL <TOKEN>` once before
+before collection, then requires pressing Enter once before
 creating one DDS writer. Inspect all four configured poses and clearance before
 confirming. All 12 joints are sent in one command at 400 Hz. Any safety or hold-gate
 failure aborts the collection and sends bounded damping to all four legs.
@@ -198,9 +198,9 @@ gate, chirp, and bounded damping exit:
 .venv-hardware/bin/pace-dobot collect-chirp --leg FL
 ```
 
-Both commands display the live state and trajectory envelope, then require one
-short `ARM <LEG> <TOKEN>` confirmation.  No writer exists before that prompt is
-matched.  In single-leg mode, the other nine joints are present in the whole-body message with
+Both commands display the live state and trajectory envelope, then require pressing
+Enter once. No writer exists before that prompt is confirmed. In single-leg mode,
+the other nine joints are present in the whole-body message with
 `Kp=0`, `Kd=0`, and `tau=0`; they require mechanical support.
 
 The collection command writes raw data by default to:
