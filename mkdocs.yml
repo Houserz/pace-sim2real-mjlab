@@ -1,29 +1,27 @@
-site_name: PACE Sim2Real (mjlab)
-site_url: https://fan-ziqi.github.io/pace-sim2real-mjlab/
-repo_url: https://github.com/fan-ziqi/pace-sim2real-mjlab
-repo_name: fan-ziqi/pace-sim2real-mjlab
+site_name: Dobot PACE Sim2Real
+repo_url: https://gitee.com/inffni-robotics/dobot-pace-sim2real-mjlab
+repo_name: inffni-robotics/dobot-pace-sim2real-mjlab
 theme:
   name: material
+  language: zh
 nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Examples:
-      - Overview: examples/index.md
-      - ANYmal-D: examples/anymal.md
-      - Dobot Rover: examples/dobot.md
-  - Guides:
-      - Usage and real data: usage.md
-      - Custom robot: tutorials/basics.md
-      - Advanced optimization: tutorials/advanced.md
-      - Best practices: tutorials/best_practice.md
-      - Training and playback: training.md
-  - Concepts:
-      - Actuators: concepts/actuators.md
-      - Simulation mapping: simulation.md
-  - API:
-      - Importing: importing.md
-      - Optimizer: api/optim.md
-  - Real world: real-world.md
-  - Contributing: contributing.md
-  - License and attribution: legal.md
-  - Upstream PACE (Isaac Lab): https://github.com/leggedrobotics/pace-sim2real
+  - 文档首页: index.md
+  - Dobot:
+      - 环境部署: dobot/installation.md
+      - 配置与参数: dobot/configuration.md
+      - 数据采集: dobot/collection.md
+      - 辨识与评估: dobot/identification.md
+      - 数据与归档: dobot/data.md
+      - 常见问题: dobot/troubleshooting.md
+      - 历史实验分析: analysis/dobot_bias_comparison_20260912.md
+  - 技术参考:
+      - 执行器模型: reference/actuators.md
+      - 仿真迁移与映射: reference/simulation.md
+      - Python 接口: reference/importing.md
+      - 优化器 API: reference/optim.md
+      - 高级优化: reference/advanced.md
+      - 自定义机器人: reference/custom-robot.md
+      - 策略兼容入口: reference/training.md
+  - 其他机器人: other-robots.md
+  - 参与贡献: contributing.md
+  - 许可与致谢: legal.md

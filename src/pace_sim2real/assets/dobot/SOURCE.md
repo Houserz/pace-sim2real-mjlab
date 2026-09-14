@@ -1,15 +1,11 @@
-# Dobot Rover model provenance
+# Dobot Rover 模型来源
 
-`dobot.xml` and the STL files are copied byte-for-byte from the audited Dobot
-MJLab v2 model used by `dobot_one_leg_sysid`.
+`dobot.xml` 和 STL 网格逐字节复制自 `dobot_one_leg_sysid` 所用、已核对的 Dobot MJLab v2 模型。
 
-- Source XML SHA-256: `ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55`
-- Nominal robot mass: `17.2352 kg`
-- Runtime identification timestep: `0.0025 s`
+- 源 XML SHA-256：`ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55`
+- 标称机器人质量：`17.2352 kg`
+- 辨识运行时间步：`0.0025 s`
 
-The XML is a nominal CAD/URDF-derived model, not an identified real-robot
-model.  The PACE task removes its free joint in memory, disables contact, and
-adds only the selected leg's PACE actuators.
+XML 是来自 CAD/URDF 的标称模型，不是辨识后的实机模型。PACE 任务在内存中移除自由关节、关闭接触，只为选择的单腿或 ALL 关节添加 PACE 执行器。
 
-The corresponding Dobot license is bundled as `LICENSE` in this directory and
-again under `runtime/dds/licenses/` in a source checkout.
+Dobot 对应许可原文保存在本目录 `LICENSE`，源码工作区的 `runtime/dds/licenses/` 中也保留一份。

@@ -1,0 +1,32 @@
+{
+  "sha256": {
+    "logs/pace/dobot_all/26_09_10_18-47-54-933685/config.pt": "93f57d0b58709f48a5a01eeed8eac4f6f1149031926ecd0920ae633135e2c226",
+    "logs/pace/dobot_all/26_09_10_18-47-54-933685/best_trajectory_params.pt": "2fe5407f528a40eb4ffc96281180dd0420881177ac859bdb7d397a4cd34f88fc",
+    "logs/pace/dobot_all/26_09_10_18-47-54-933685/best_trajectory.pt": "7ab803985e64aecd75130a77dad98980ce5fb64a4f41466c6143116f5be76b61",
+    "logs/pace/dobot_all/26_09_10_18-47-54-933685/control.json": "e0834fbac6d8a4cfca717dc2274e364d7a94fb836176bca5db13ef936f4a628f",
+    "logs/pace/dobot_all/26_09_12_11-39-00-723571/config.pt": "9eae3345dcee6b080c8f5320686373ba5102f8ca39c85cbd7fb7e812012e541a",
+    "logs/pace/dobot_all/26_09_12_11-39-00-723571/best_trajectory_params.pt": "70e4446210617c99fc64ec30de91802b74c6a3b54b779fcfd4b0f4200e46f3f7",
+    "logs/pace/dobot_all/26_09_12_11-39-00-723571/best_trajectory.pt": "5853a5d8e4749f14bd45fd79b97b084552f60d4534bfdb9c74a9e36bcfad913f",
+    "logs/pace/dobot_all/26_09_12_11-39-00-723571/control.json": "e0834fbac6d8a4cfca717dc2274e364d7a94fb836176bca5db13ef936f4a628f",
+    "logs/pace/dobot_all/26_09_12_13-29-23-838679/config.pt": "aeac93ac73a419d546b15ef1c1c3d7733ea7116678a2862e45c5cfbf5ead1045",
+    "logs/pace/dobot_all/26_09_12_13-29-23-838679/best_trajectory_params.pt": "896393c08add4393fe412dd65d41c85d528cb3e5f4d6222e5c9d197b43b96b5c",
+    "logs/pace/dobot_all/26_09_12_13-29-23-838679/best_trajectory.pt": "837fe54c4d8892b97e885f39c4ac2acc0d0620aba2bb35b0e011bbcfb69e6cd2",
+    "logs/pace/dobot_all/26_09_12_13-29-23-838679/control.json": "e0834fbac6d8a4cfca717dc2274e364d7a94fb836176bca5db13ef936f4a628f",
+    "logs/pace/dobot_all/26_09_12_15-32-04-335564/config.pt": "4f70de9f4db9eb0ab7f7b8d2ab5bc1129d239606459b5b40f6683a631b90b533",
+    "logs/pace/dobot_all/26_09_12_15-32-04-335564/best_trajectory_params.pt": "887ba1069ee0b7aaff4bfe3d4f673890329f078cc5651fa23dc315cb3d9c1510",
+    "logs/pace/dobot_all/26_09_12_15-32-04-335564/best_trajectory.pt": "2f013667f0aad96a50769c0fcb81414421039a412b6f2f6daa591941562c3897",
+    "logs/pace/dobot_all/26_09_12_15-32-04-335564/control.json": "e0834fbac6d8a4cfca717dc2274e364d7a94fb836176bca5db13ef936f4a628f",
+    "logs/pace/dobot_all/26_09_12_17-31-07-407208/config.pt": "c6f16f6b51f5c69f48fbc20cb56ebbef9707eb51104ff3e3b2366e7830795fa2",
+    "logs/pace/dobot_all/26_09_12_17-31-07-407208/best_trajectory_params.pt": "0d51882499c817755f499d763042590954a0f84250a93343095e3b9e8bbe85ed",
+    "logs/pace/dobot_all/26_09_12_17-31-07-407208/best_trajectory.pt": "630864e08e7512e86a3bb0d0eb6ca5b53dd1ed9fe3073bb3e08b6510c1bafb9e",
+    "logs/pace/dobot_all/26_09_12_17-31-07-407208/control.json": "ede3cc9f3dd691500c80c57ce8ceebef2908b7d57f6d65bbcde8ee94eff3276f"
+  },
+  "training_arrays_equal_O_A_B_C": true,
+  "D_training_arrays_equal_O": {
+    "time": true,
+    "dof_pos": false,
+    "des_dof_pos": false
+  },
+  "D_capture_source": "unresolved",
+  "C_D_heldout_evaluation": "not run"
+}
