@@ -37,4 +37,4 @@ sha256sum -c runtime/MANIFEST.sha256
 - 独立评估数据、参考参数、评估 JSON 和图像。
 - 关节顺序、PD 增益、时间步、拟合边界、设备与运行日期。
 
-转换文件、`logs/` 和 `config/dobot_hardware.local.json` 不随 Git 保存，需要另行备份。历史报告保存在 `docs/analysis/`，其中引用的完整训练日志和参数文件不随源码提供。
+转换文件、`logs/` 和 `config/dobot_hardware.local.json` 不随 Git 保存。历史报告保存在 `docs/analysis/`，其中引用的完整训练日志和参数文件不随源码提供，可以重训得到对应辨识数据。
