@@ -26,6 +26,7 @@ videos/
 wandb/
 *.egg-info/
 /dist/
+/runtime/dds/dist/
 build/
 site/
 config/dobot_hardware.local.json

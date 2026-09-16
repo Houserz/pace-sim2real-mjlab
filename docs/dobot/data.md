@@ -24,7 +24,7 @@ sha256sum -c runtime/MANIFEST.sha256
 
 - `config/dobot_hardware.json`：默认采集、控制与安全配置。
 - `runtime/dds/config/`：DDS 和 CycloneDDS 配置。
-- `runtime/dds/dist/`：匹配的原生安装包与 Python wheel。
+- `runtime/dds/dist/`：单独交付的厂商原生安装包与 Python wheel 放置位置，不纳入 Git。
 - `runtime/dds/requirements-hardware.txt`、`runtime/dds/licenses/`、`runtime/MANIFEST.sha256`：依赖、许可和校验清单。
 
 ## 实验归档与复现

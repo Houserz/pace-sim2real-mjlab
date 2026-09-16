@@ -7,7 +7,7 @@
 | mjlab 移植及文档 | Ziqi Fan，2026；Apache-2.0 | 根目录 `LICENSE` 和 `LICENSES/ZIQI-FAN-APACHE-2.0.txt` |
 | 保留的上游 PACE 代码 | ETH Zurich, Robotic Systems Lab, Filip Bjelonic，2025；Apache-2.0 | `LICENSES/UPSTREAM-PACE-NOTICE.txt` 和根目录 `LICENSE` |
 | 简化 ANYmal-D 描述 | ANYbotics AG，2023；BSD-3-Clause | `src/pace_sim2real/assets/anymal_d/LICENSE` |
-| Dobot 模型及 DDS 运行时 | 仓库中保留各自来源记录；DDS 配套二进制保留在 runtime/dds/dist/ | `src/pace_sim2real/assets/dobot/LICENSE`、`runtime/dds/licenses/`、`runtime/THIRD_PARTY_NOTICES.md` |
+| Dobot 模型及 DDS 运行时 | 仓库中保留各自来源记录；DDS 二进制单独交付、不纳入 Git（校验值见 runtime/MANIFEST.sha256） | `src/pace_sim2real/assets/dobot/LICENSE`、`runtime/dds/licenses/`、`runtime/THIRD_PARTY_NOTICES.md` |
 
 根目录 `LICENSE` 保存完整 Apache License 2.0 条款；`LICENSES/` 中的独立署名记录用于明确上游和移植部分的来源。中文化不会移除原版权、署名或许可文本。
 

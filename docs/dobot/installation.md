@@ -38,7 +38,7 @@ uv sync --locked --group dev --group docs
 
 ## 3. Dobot 采集环境
 
-仅采集的机器无需执行上一节的 `uv sync`。仓库的 `runtime/dds/dist/` 保留以下配套文件：
+仅采集的机器无需执行上一节的 `uv sync`。DDS 配套二进制不纳入 Git，随交付单独提供；取得后放入 `runtime/dds/dist/`：
 
 - `dds-middleware-with-thirdparty_0.24.4_amd64.deb`
 - `dds_middleware_python-0.24.4-cp310-cp310-linux_x86_64.whl`
