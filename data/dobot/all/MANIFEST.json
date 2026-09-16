@@ -1,0 +1,951 @@
+{
+  "selection": "ALL collect completed eligible_for_fit=true; finite 12-joint arrays; monotonic timestamps; chirp present",
+  "retained": [
+    {
+      "path": "data/dobot/all/all_collect_20260910_174730.npz",
+      "bytes": 1704825,
+      "sha256": "a8f230aa4cfb70cf3b4275db5bf9cc621a4e1142ccc88945aded6b8b82ce86f8",
+      "samples": 9200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.1,
+            0.4
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 10.0,
+          "max_frequency_hz": 1.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            0.0,
+            90.0,
+            90.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "8bdca5e47b3cda8410e388e786f5657ba9f05d7333be02c25b2039138236e550",
+        "control": {
+          "kd": [
+            1.8,
+            1.8,
+            1.8
+          ],
+          "kp": [
+            40.0,
+            40.0,
+            40.0
+          ]
+        },
+        "created_utc": "2026-09-10T09:48:02.104709+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 8.127042334585552e-05,
+            "max_final_tracking_error_rad": 0.033524007797241184,
+            "max_position_span_rad": 0.0003669261932373047,
+            "window_s": 2.248638968
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 3.8700201593264535e-05,
+            "max_final_tracking_error_rad": 0.02779484987258911,
+            "max_position_span_rad": 0.0002936124801635742,
+            "window_s": 2.248638968
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 0.00012990743183793858,
+            "max_final_tracking_error_rad": 0.025089409947395322,
+            "max_position_span_rad": 0.0006216838955879211,
+            "window_s": 2.248638968
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 6.531321693548206e-05,
+            "max_final_tracking_error_rad": 0.02384604215621948,
+            "max_position_span_rad": 0.00043892860412597656,
+            "window_s": 2.248638968
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 3.13344,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.757303955499,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 8413,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_174929.npz",
+      "bytes": 3999477,
+      "sha256": "2ca5dd930176c7089e8866f2a9ec101546bb9ee676e3fad1bd878350a5c79a5e",
+      "samples": 17200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.25,
+            0.45
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 30.0,
+          "max_frequency_hz": 4.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            0.0,
+            90.0,
+            90.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "db14eb5b67f7e384ef70decbdbe723efa2e4d5d7b393e1fc6c8fdac03c1e154d",
+        "control": {
+          "kd": [
+            1.8,
+            1.8,
+            1.8
+          ],
+          "kp": [
+            40.0,
+            40.0,
+            40.0
+          ]
+        },
+        "created_utc": "2026-09-10T09:50:25.826902+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 3.265127286652152e-05,
+            "max_final_tracking_error_rad": 0.025562782585620877,
+            "max_position_span_rad": 0.0002187490463256836,
+            "window_s": 2.249006422
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 3.265127286652152e-05,
+            "max_final_tracking_error_rad": 0.02786675542593002,
+            "max_position_span_rad": 0.00032961368560791016,
+            "window_s": 2.249006422
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 3.263802153824777e-05,
+            "max_final_tracking_error_rad": 0.02490664720535278,
+            "max_position_span_rad": 0.0003655180335044861,
+            "window_s": 2.249006422
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 4.865887742121227e-05,
+            "max_final_tracking_error_rad": 0.02384604215621948,
+            "max_position_span_rad": 0.00036394596099853516,
+            "window_s": 2.249006422
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 2.453675,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.86551123479,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 13029,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_175119.npz",
+      "bytes": 3987254,
+      "sha256": "adbe37eddd0e99dfcf7c4705c787f656376ca4df03579437f3fcb2045fd396e7",
+      "samples": 17200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.25,
+            0.45
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 30.0,
+          "max_frequency_hz": 4.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            90.0,
+            90.0,
+            90.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "93b9fbff236de13104bb15772b34e0892f90119f21b32216fd04665cf33443eb",
+        "control": {
+          "kd": [
+            1.8,
+            1.8,
+            1.8
+          ],
+          "kp": [
+            40.0,
+            40.0,
+            40.0
+          ]
+        },
+        "created_utc": "2026-09-10T09:52:21.159553+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 3.2025295111929366e-05,
+            "max_final_tracking_error_rad": 0.02585640251636505,
+            "max_position_span_rad": 0.0003654956817626953,
+            "window_s": 2.248298123
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 0.0,
+            "max_final_tracking_error_rad": 0.028160367906093595,
+            "max_position_span_rad": 0.00029211491346359253,
+            "window_s": 2.248298123
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 0.0001952237334787739,
+            "max_final_tracking_error_rad": 0.026295323669910428,
+            "max_position_span_rad": 0.0006950795650482178,
+            "window_s": 2.248298123
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 4.9310470950487274e-05,
+            "max_final_tracking_error_rad": 0.024394322931766507,
+            "max_position_span_rad": 0.00036704540252685547,
+            "window_s": 2.248298123
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 8.251122,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.8578232147657,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 18235,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_175639.npz",
+      "bytes": 3969866,
+      "sha256": "8dbf16e9acdd834a2f8e80fd16d78e7ecfee2017d8a9ca396bfe9607c81f6f0f",
+      "samples": 17200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.25,
+            0.4
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 30.0,
+          "max_frequency_hz": 4.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            90.0,
+            0.0,
+            90.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "c77134773aa414f9a032216356b47e50e2917f1df2d9bfebab6e9ca2ef181f2f",
+        "control": {
+          "kd": [
+            1.8,
+            1.8,
+            1.8
+          ],
+          "kp": [
+            40.0,
+            40.0,
+            40.0
+          ]
+        },
+        "created_utc": "2026-09-10T09:57:28.690691+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 0.0,
+            "max_final_tracking_error_rad": 0.02534407079219818,
+            "max_position_span_rad": 0.00029211491346359253,
+            "window_s": 2.249319136
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 6.327954510570296e-05,
+            "max_final_tracking_error_rad": 0.02764804363250732,
+            "max_position_span_rad": 0.00029211491346359253,
+            "window_s": 2.249319136
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 3.263348400237571e-05,
+            "max_final_tracking_error_rad": 0.024650488793849942,
+            "max_position_span_rad": 0.00025466829538345337,
+            "window_s": 2.249319136
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 0.00015252808275897247,
+            "max_final_tracking_error_rad": 0.02391794770956039,
+            "max_position_span_rad": 0.0004584789276123047,
+            "window_s": 2.249319136
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 7.218052,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.86453282456733,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 5772,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180145.npz",
+      "bytes": 4037189,
+      "sha256": "856100f721f3bf74879c4e82f73118d89f4a827e41945d075502a54c702d81f8",
+      "samples": 17200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.25,
+            0.4
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 30.0,
+          "max_frequency_hz": 4.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            90.0,
+            90.0,
+            0.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "58c0cca8e7e1d08021cbfe8c558f64cac17c113cda673e3c7a313625a2d286aa",
+        "control": {
+          "kd": [
+            1.8,
+            1.8,
+            1.8
+          ],
+          "kp": [
+            40.0,
+            40.0,
+            40.0
+          ]
+        },
+        "created_utc": "2026-09-10T10:02:35.182725+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 2.5314612380098042e-05,
+            "max_final_tracking_error_rad": 0.02519726455211639,
+            "max_position_span_rad": 0.00025616586208343506,
+            "window_s": 2.248747095
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 0.00019118902001093613,
+            "max_final_tracking_error_rad": 0.027282525599002835,
+            "max_position_span_rad": 0.0006591305136680603,
+            "window_s": 2.248747095
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 2.5339461485896188e-05,
+            "max_final_tracking_error_rad": 0.024723891913890836,
+            "max_position_span_rad": 0.00023055076599121094,
+            "window_s": 2.248747095
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 4.929399947530903e-05,
+            "max_final_tracking_error_rad": 0.023735192418098447,
+            "max_position_span_rad": 0.00025615841150283813,
+            "window_s": 2.248747095
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 4.946076,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.8614484707621,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 5931,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180339.npz",
+      "bytes": 3912852,
+      "sha256": "04a1dd9c2888c8bfbad86873cc4d1382bd496263897e397672ce4e2c2c7fd7c8",
+      "samples": 17200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.25,
+            0.4
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 30.0,
+          "max_frequency_hz": 4.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            90.0,
+            90.0,
+            0.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "1e3f7b9d719b52421f5886d5a6fc379da804ad58fb585df86b7cb44ba8126f74",
+        "control": {
+          "kd": [
+            1.3,
+            1.3,
+            1.3
+          ],
+          "kp": [
+            25.0,
+            25.0,
+            25.0
+          ]
+        },
+        "created_utc": "2026-09-10T10:04:27.458892+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 1.2659256917195809e-05,
+            "max_final_tracking_error_rad": 0.03919933438301086,
+            "max_position_span_rad": 0.0002561621367931366,
+            "window_s": 2.248327006
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 4.864044318722557e-05,
+            "max_final_tracking_error_rad": 0.04380727261304855,
+            "max_position_span_rad": 0.00032806396484375,
+            "window_s": 2.248327006
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 8.128501368983894e-05,
+            "max_final_tracking_error_rad": 0.04303878247737884,
+            "max_position_span_rad": 0.0004014745354652405,
+            "window_s": 2.248327006
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 6.532227933687085e-05,
+            "max_final_tracking_error_rad": 0.043110688030719754,
+            "max_position_span_rad": 0.00029218196868896484,
+            "window_s": 2.248327006
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 2.611226,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.877231035914,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 4364,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180630.npz",
+      "bytes": 3982535,
+      "sha256": "08e76e584091881277e84bfa3019eaef781754a88e723ce33d6765176d455b88",
+      "samples": 17200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.25,
+            0.5
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 30.0,
+          "max_frequency_hz": 4.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            90.0,
+            90.0,
+            90.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "186cd5add2c3c3b56a1326aefa2da82b799ed4c48e64ee42cfd5f54985aab932",
+        "control": {
+          "kd": [
+            1.3,
+            1.3,
+            1.3
+          ],
+          "kp": [
+            25.0,
+            25.0,
+            25.0
+          ]
+        },
+        "created_utc": "2026-09-10T10:07:20.254344+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 1.598817924254461e-05,
+            "max_final_tracking_error_rad": 0.05326662465929988,
+            "max_position_span_rad": 0.00022020936012268066,
+            "window_s": 2.24847688
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 6.395892999320015e-05,
+            "max_final_tracking_error_rad": 0.043660466372966764,
+            "max_position_span_rad": 0.00034304801374673843,
+            "window_s": 2.24847688
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 6.319721337073799e-05,
+            "max_final_tracking_error_rad": 0.04282007068395614,
+            "max_position_span_rad": 0.0004014745354652405,
+            "window_s": 2.24847688
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 0.00012989360130730545,
+            "max_final_tracking_error_rad": 0.04303878247737884,
+            "max_position_span_rad": 0.0005123615264892578,
+            "window_s": 2.24847688
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 7.651389,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.861692567088,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 5917,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_181114.npz",
+      "bytes": 3949814,
+      "sha256": "a31e9bfc21f2bf5fe5ef0d084b08a3a0894f3ea720c4e1a9b20365c409aad44e",
+      "samples": 17200,
+      "metadata": {
+        "chirp": {
+          "amplitude_rad": [
+            0.2,
+            0.25,
+            0.4
+          ],
+          "direction": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "duration_s": 30.0,
+          "max_frequency_hz": 4.0,
+          "min_frequency_hz": 0.1,
+          "phase_deg": [
+            0.0,
+            90.0,
+            90.0
+          ],
+          "post_hold_s": 2.0,
+          "pre_hold_s": 2.0,
+          "ramp_s": 2.0
+        },
+        "config": "/home/dobot/code/pace-sim2real-mjlab/config/dobot_hardware.json",
+        "config_sha256": "d27dfcb95eb750f2e0c82db6c71f8e3f5314e01dece7a263e7ab82e7ec95d7ae",
+        "control": {
+          "kd": [
+            1.3,
+            1.3,
+            1.3
+          ],
+          "kp": [
+            25.0,
+            25.0,
+            25.0
+          ]
+        },
+        "created_utc": "2026-09-10T10:12:04.057640+00:00",
+        "eligible_for_fit": true,
+        "error": null,
+        "gc_collected_before_active": 0,
+        "gc_disabled_during_active_capture": true,
+        "gc_was_enabled_before_active": true,
+        "hold_stability": {
+          "FL": {
+            "max_drift_rate_rad_s": 6.462908360798755e-05,
+            "max_final_tracking_error_rad": 0.051456089019775275,
+            "max_position_span_rad": 0.0003654956817626953,
+            "window_s": 2.248463321
+          },
+          "FR": {
+            "max_drift_rate_rad_s": 0.00015258613832960473,
+            "max_final_tracking_error_rad": 0.04435554593801498,
+            "max_position_span_rad": 0.0005140304565429688,
+            "window_s": 2.248463321
+          },
+          "RL": {
+            "max_drift_rate_rad_s": 0.00012194166718488216,
+            "max_final_tracking_error_rad": 0.0441353365778923,
+            "max_position_span_rad": 0.0005108118057250977,
+            "window_s": 2.248463321
+          },
+          "RR": {
+            "max_drift_rate_rad_s": 4.8670630641618184e-05,
+            "max_final_tracking_error_rad": 0.04340280294418335,
+            "max_position_span_rad": 0.00029361993074417114,
+            "window_s": 2.248463321
+          }
+        },
+        "leg": "ALL",
+        "max_state_interpolation_gap_ms": 2.824162,
+        "mode": "collect",
+        "model": "/home/dobot/code/pace-sim2real-mjlab/src/pace_sim2real/assets/dobot/dobot.xml",
+        "model_sha256": "ebb45f4cd4697cef2f24659675affbd788bdc25d49a4e2f115ab81e514b7fd55",
+        "observed_command_rate_hz": 399.8659416590851,
+        "physics_dt": 0.0025,
+        "pre_capture_samples_discarded": 5756,
+        "schema": "pace_dobot_capture_metadata_v1",
+        "selected_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "completed",
+        "trajectory_mode": "mirrored_offsets"
+      }
+    }
+  ],
+  "excluded": [
+    {
+      "path": "data/dobot/all/all_collect_20260910_174929.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_174929.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180036.npz",
+      "reason": "leg=ALL, mode=collect, status=operator_stop, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180339.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180339.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180540.npz",
+      "reason": "leg=ALL, mode=collect, status=operator_stop, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180630.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180630.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_180858.npz",
+      "reason": "leg=ALL, mode=collect, status=aborted:RuntimeError, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_181114.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_collect_20260910_181114.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/all_hold_20260910_172356.npz",
+      "reason": "leg=ALL, mode=hold, status=completed, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_hold_20260910_172447.npz",
+      "reason": "leg=ALL, mode=hold, status=completed, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_hold_20260910_174436.npz",
+      "reason": "leg=ALL, mode=hold, status=completed, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_hold_20260910_174538.npz",
+      "reason": "leg=ALL, mode=hold, status=completed, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_hold_20260910_175832.npz",
+      "reason": "leg=ALL, mode=hold, status=completed, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/all_hold_20260910_175930.npz",
+      "reason": "leg=ALL, mode=hold, status=completed, eligible_for_fit=False"
+    },
+    {
+      "path": "data/dobot/all/train_20260910_181114.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/all/train_20260910_181114.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/fl/fl_collect_20260907_173606.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/fl/fl_collect_20260907_173606.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/fl/fl_collect_20260907_173606_30s.npz",
+      "reason": "leg=FL, mode=collect, status=completed, eligible_for_fit=True"
+    },
+    {
+      "path": "data/dobot/fl/fl_collect_20260907_173803.npz",
+      "reason": "leg=FL, mode=collect, status=completed, eligible_for_fit=True"
+    },
+    {
+      "path": "data/dobot/fl/fl_collect_20260907_173803.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/fl/fl_collect_20260907_173803.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/fl/ref_original_xml_params.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/rl/chirp_data.pt",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/rl/chirp_data.pt.json",
+      "reason": "非全腿原始采集（单腿或转换产物）"
+    },
+    {
+      "path": "data/dobot/rl/rl_collect_20260904_150900.npz",
+      "reason": "leg=RL, mode=collect, status=completed, eligible_for_fit=True"
+    },
+    {
+      "path": "data/dobot/rl/rl_collect_20260907_172438.npz",
+      "reason": "leg=RL, mode=collect, status=completed, eligible_for_fit=True"
+    },
+    {
+      "path": "data/dobot/rl/rl_collect_20260907_173251.npz",
+      "reason": "leg=RL, mode=collect, status=completed, eligible_for_fit=True"
+    },
+    {
+      "path": "data/dobot/rl/rl_collect_20260907_173345.npz",
+      "reason": "leg=RL, mode=collect, status=completed, eligible_for_fit=True"
+    }
+  ]
+}
